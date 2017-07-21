@@ -1,0 +1,93 @@
+---
+title: "Faculty Classification"
+author: Chad Evans
+output: 
+  github_document:
+  toc: true
+always_allow_html: yes
+params:
+ d: !r Sys.Date() 
+
+---
+Built with `r getRversion()`.  Last run on `r params$d`.
+
+* [Configure](#config)
+    + Libraries
+    + directories
+    + data
+* [Munge](#munge)
+* [Exploratory Analysis](#exploratory)
+    + [Missing Data](#missing)
+    + [Data Quality Issues](#quality)
+    + [Faculty Features](#faculty)
+    + [Turnover Intentions](#turnintent)
+    + [Job Satisfaction](#satis)
+
+## Configure{#config}
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, fig.width=10, fig.height=10, fig.path='graphs/', cache.path ='cache/')
+```
+
+```{r Libraries, include=FALSE, eval=TRUE, echo=TRUE, warning=TRUE,error=FALSE, message=TRUE, tidy=TRUE, results='markup', cache=FALSE, fig.width=7, fig.height=7}
+library(tidyverse)
+library(stats)
+```
+
+```{r Directories, include=FALSE}
+Private_Cache <- "/Users/chadgevans/Research/Projects/Data/HERI/Cache"
+Raw<-"/Users/chadgevans/Research/Projects/Data/HERI/Raw"
+Munge<-"./munge"
+Source<-"./src"
+Graph<-"./graphs"
+```
+
+## Munge{#munge}
+```{r Data Munge, eval=FALSE, cache=TRUE}
+source(file.path(Munge, "01_Merge_the_data.R"))
+source(file.path(Munge, "02_Clean_the_data.R"))
+#source(file.path(Munge, "Recode_HERI.R"))
+save(df, file=file.path(Private_Cache,"(HERI_Class.RData"))
+```
+
+```{r Clean Data Import}
+load(file.path(Private_Cache,"HERI_Class.RData"))
+```
+
+
+ Multiple Imputation was the preferred method when our
+data structure was more complicated (high dimensions, high cluster overlap),
+
+```{r}
+# Present Day Work Conditions (also opinions and attitutdes)
+#Classify faculty based on job attitudes/activities/experiences
+SVYVARS<-c("ACE","SUBJID","YEAR","ACERECODE","RESTYPE")
+INSTVARS<-c("DEPTA","INSTTYPE"," INSTCONT","SELECTIVITY","CARNEGIE")
+DEMGVARS<-c("GENACT03","GENACT04","BIRTHYR","NCHILD1","NCHILD2","MARITAL","SEX","NATENGSP","RACEGROUP","STATE","OBEREG","MAJORA")
+OTHERS<-c("DEPTDISC")
+OMIT<-c(SVYVARS,INSTVARS,DEMGVARS,OTHERS)
+
+df2<-df[!names(df) %in% OMIT]
+
+nums <- sapply(df2, is.numeric)
+cats <- sapply(df2, is.numeric)
+
+numeric<-df2[,nums]
+categorical<-df2[,cats]
+```
+
+```{r Trial Run}
+Clust<- df %>%
+  select(COURSENUM,STRESS, SATIS_COMPENSATION, SATIS_WORKPLACE) %>%
+  na.omit() %>%
+  kmeans(5, nstart = 20)
+Clust
+```
+
+```{r}
+Clust<- df %>%
+  select(COURSENUM,STRESS, SATIS_COMPENSATION, SATIS_WORKPLACE) %>%
+  na.omit() %>%
+  kmeans(5, nstart = 20)
+Clust
+```
+
