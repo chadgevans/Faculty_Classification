@@ -31,6 +31,8 @@ knitr::opts_chunk$set(echo = TRUE, message=FALSE, fig.width=10, fig.height=10, f
 ```{r Libraries, include=FALSE, eval=TRUE, echo=TRUE, warning=TRUE,error=FALSE, message=TRUE, tidy=TRUE, results='markup', cache=FALSE, fig.width=7, fig.height=7}
 library(tidyverse)
 library(stats)
+library(mice)
+library(knitr)
 ```
 
 ```{r Directories, include=FALSE}
@@ -45,7 +47,7 @@ Graph<-"./graphs"
 ```{r Data Munge, eval=FALSE, cache=TRUE}
 source(file.path(Munge, "01_Merge_the_data.R"))
 source(file.path(Munge, "02_Clean_the_data.R"))
-#source(file.path(Munge, "Recode_HERI.R"))
+source(file.path(Munge, "Recode_HERI.R"))
 save(df, file=file.path(Private_Cache,"(HERI_Class.RData"))
 ```
 
@@ -61,33 +63,100 @@ data structure was more complicated (high dimensions, high cluster overlap),
 # Present Day Work Conditions (also opinions and attitutdes)
 #Classify faculty based on job attitudes/activities/experiences
 SVYVARS<-c("ACE","SUBJID","YEAR","ACERECODE","RESTYPE")
-INSTVARS<-c("DEPTA","INSTTYPE"," INSTCONT","SELECTIVITY","CARNEGIE")
-DEMGVARS<-c("GENACT03","GENACT04","BIRTHYR","NCHILD1","NCHILD2","MARITAL","SEX","NATENGSP","RACEGROUP","STATE","OBEREG","MAJORA")
-OTHERS<-c("DEPTDISC")
-OMIT<-c(SVYVARS,INSTVARS,DEMGVARS,OTHERS)
+INSTVARS<-c("DEPTA","INSTTYPE","INSTCONT","SELECTIVITY","CARNEGIE")
+DEMGVARS<-c("GENACT03","GENACT04","NCHILD1","NCHILD2","MARITAL","SEX","NATENGSP","RACEGROUP","STATE","OBEREG","MAJORA","AGE")
+PTVARS<-c("PTCHOICE","PTWORKFT","PTTSEEK","PTCAREER","PTREASON01","PTREASON02","PTREASON03","PTREASON04","PTREASON05","PTREASON06","PTREASON07","PTRESOURCES01","PTRESOURCES02","PTRESOURCES03","PTRESOURCES04","PTRESOURCES05","PTOPN01","PTOPN02","PTOPN03","PTOPN04","PTOPN05","PTOPN06","PTOPN07","PTOPN08","PTOPN09","PTOPN10","PTTEACH","PTSALARY","PTPAY")
+OTHERS<-c("DEPTDISC","SSVALID","SALARY","TENUREYR","SALARY12","CCRANK","CCSTATUS","SALARYBASE","BIRTHYR")
 
-df2<-df[!names(df) %in% OMIT]
-
-nums <- sapply(df2, is.numeric)
-cats <- sapply(df2, is.numeric)
-
-numeric<-df2[,nums]
-categorical<-df2[,cats]
-```
-
-```{r Trial Run}
-Clust<- df %>%
-  select(COURSENUM,STRESS, SATIS_COMPENSATION, SATIS_WORKPLACE) %>%
-  na.omit() %>%
-  kmeans(5, nstart = 20)
-Clust
+#HIGHMISSVARS<-c()
+OMIT<-c(SVYVARS,INSTVARS,DEMGVARS,PTVARS,OTHERS)
 ```
 
 ```{r}
-Clust<- df %>%
-  select(COURSENUM,STRESS, SATIS_COMPENSATION, SATIS_WORKPLACE) %>%
-  na.omit() %>%
+miss_pct<-df %>% 
+  select(-one_of(OMIT)) %>%
+  map_dbl(function(x) { round((sum(is.na(x)) / length(x)) * 100, 1) })
+data.frame(miss=miss_pct, var=names(miss_pct), row.names=NULL) %>%
+ggplot(aes(x=reorder(var, -miss), y=miss)) +
+geom_bar(stat='identity', fill='red') +
+labs(x='', y='% missing', title='Percent missing data by feature') +
+theme(axis.text.x=element_text(angle=90, hjust=1))
+```
+
+```{r only numeric}
+t<-df %>% 
+  select(-one_of(OMIT)) %>%
+  select(which(sapply(., is.numeric)))
+tempData <- mice(t,m=1,maxit=50,meth='pmm',seed=500)
+completedData <- complete(tempData,1)
+
+Clust<- completedData %>%
   kmeans(5, nstart = 20)
 Clust
 ```
+
+```{r all vars, cache=TRUE}
+tempData<-df %>% 
+  select(-one_of(OMIT)) %>%
+  mice(m=1,maxit=50,meth='pmm',seed=500)
+completedData <- complete(tempData,1)
+```
+
+```{r}
+dfClust<-data.frame(model.matrix(~ ., data=completedData, contrasts.arg = lapply(completedData[,sapply(completedData, is.factor)], contrasts, contrasts=FALSE)))
+```
+
+```{r}
+wssplot <- function(data, nc=15, seed=1234){
+  wss <- (nrow(data)-1)*sum(apply(data,2,var))
+  for (i in 2:nc){
+    set.seed(seed)
+    wss[i] <- sum(kmeans(data, centers=i)$withinss)}
+  plot(1:nc, wss, type="b", xlab="Number of Clusters",
+       ylab="Within groups sum of squares")}
+wssplot(dfClust, nc=7) # put in # of clusters here
+```
+
+
+```{r}
+Clust<- dfClust %>%
+  kmeans(5, nstart = 20)
+Clust
+```
+
+```{r demography of adjucts}
+CLUSTER<-Clust$cluster
+df2<-cbind(df,CLUSTER)
+options(digits=2)
+DemVars<-df2[DEMGVARS]
+list<-do.call(rbind, sapply(DemVars, function(x){
+    if(is.numeric(x)==TRUE){
+      means<-aggregate(x ~ df2$CLUSTER, FUN=mean, na.action=na.omit)
+      print(means)[,2]
+      }
+    else{
+      prop.table(table(x, df2$CLUSTER),2)
+      }
+  }))
+kable(list, caption = "Distribution of Adjunct Types by Demographic Characteristics")
+```
+
+
+```{r Institutions_of_adjucts}
+CLUSTER<-Clust$cluster
+df3<-cbind(df,CLUSTER)
+options(digits=2)
+InstVars<-df3[INSTVARS]
+list<-do.call(rbind, sapply(InstVars, function(x){
+    if(is.numeric(x)==TRUE){
+      means<-aggregate(x ~ df3$CLUSTER, FUN=mean, na.action=na.omit)
+      print(means)[,2]
+      }
+    else{
+      prop.table(table(x, df3$CLUSTER),2)
+      }
+  }))
+kable(list, caption = "Distribution of Adjunct Types by Institutional Characteristics")
+```
+
 
