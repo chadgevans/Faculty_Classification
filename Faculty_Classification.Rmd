@@ -18,10 +18,8 @@ Built with `r getRversion()`.  Last run on `r params$d`.
 * [Munge](#munge)
 * [Exploratory Analysis](#exploratory)
     + [Missing Data](#missing)
-    + [Data Quality Issues](#quality)
-    + [Faculty Features](#faculty)
-    + [Turnover Intentions](#turnintent)
-    + [Job Satisfaction](#satis)
+    + [Single Imputation](#impute)
+    
 
 ## Configure{#config}
 ```{r setup, include=FALSE}
@@ -48,7 +46,7 @@ Graph<-"./graphs"
 source(file.path(Munge, "01_Merge_the_data.R"))
 source(file.path(Munge, "02_Clean_the_data.R"))
 source(file.path(Munge, "Recode_HERI.R"))
-save(df, file=file.path(Private_Cache,"(HERI_Class.RData"))
+save(df, file=file.path(Private_Cache,"HERI_Class.RData"))
 ```
 
 ```{r Clean Data Import}
@@ -72,6 +70,10 @@ OTHERS<-c("DEPTDISC","SSVALID","SALARY","TENUREYR","SALARY12","CCRANK","CCSTATUS
 OMIT<-c(SVYVARS,INSTVARS,DEMGVARS,PTVARS,OTHERS)
 ```
 
+## Exploratory Analysis{#explore}
+
+# Missing Data{#missing}
+
 ```{r}
 miss_pct<-df %>% 
   select(-one_of(OMIT)) %>%
@@ -83,30 +85,20 @@ labs(x='', y='% missing', title='Percent missing data by feature') +
 theme(axis.text.x=element_text(angle=90, hjust=1))
 ```
 
-```{r only numeric}
-t<-df %>% 
-  select(-one_of(OMIT)) %>%
-  select(which(sapply(., is.numeric)))
-tempData <- mice(t,m=1,maxit=50,meth='pmm',seed=500)
-completedData <- complete(tempData,1)
+## Single Imputation{#impute}
 
-Clust<- completedData %>%
-  kmeans(5, nstart = 20)
-Clust
-```
-
-```{r all vars, cache=TRUE}
+```{r Impute_data, cache=TRUE}
 tempData<-df %>% 
   select(-one_of(OMIT)) %>%
   mice(m=1,maxit=50,meth='pmm',seed=500)
 completedData <- complete(tempData,1)
 ```
 
-```{r}
+```{r Create_Binaries}
 dfClust<-data.frame(model.matrix(~ ., data=completedData, contrasts.arg = lapply(completedData[,sapply(completedData, is.factor)], contrasts, contrasts=FALSE)))
 ```
 
-```{r}
+```{r Determin_Number_Clusters}
 wssplot <- function(data, nc=15, seed=1234){
   wss <- (nrow(data)-1)*sum(apply(data,2,var))
   for (i in 2:nc){
@@ -117,43 +109,41 @@ wssplot <- function(data, nc=15, seed=1234){
 wssplot(dfClust, nc=7) # put in # of clusters here
 ```
 
-
-```{r}
+```{r K_means}
 Clust<- dfClust %>%
   kmeans(5, nstart = 20)
 Clust
 ```
 
-```{r demography of adjucts}
+```{r add_clusters}
 CLUSTER<-Clust$cluster
-df2<-cbind(df,CLUSTER)
+df<-cbind(df,CLUSTER)
+```
+
+
+```{r demography_table}
 options(digits=2)
-DemVars<-df2[DEMGVARS]
-list<-do.call(rbind, sapply(DemVars, function(x){
+list<-do.call(rbind, sapply(df[DEMGVARS], function(x){
     if(is.numeric(x)==TRUE){
-      means<-aggregate(x ~ df2$CLUSTER, FUN=mean, na.action=na.omit)
+      means<-aggregate(x ~ df$CLUSTER, FUN=mean, na.action=na.omit)
       print(means)[,2]
       }
     else{
-      prop.table(table(x, df2$CLUSTER),2)
+      prop.table(table(x, df$CLUSTER),2)
       }
   }))
 kable(list, caption = "Distribution of Adjunct Types by Demographic Characteristics")
 ```
 
 
-```{r Institutions_of_adjucts}
-CLUSTER<-Clust$cluster
-df3<-cbind(df,CLUSTER)
-options(digits=2)
-InstVars<-df3[INSTVARS]
-list<-do.call(rbind, sapply(InstVars, function(x){
+```{r Institution_table}
+list<-do.call(rbind, sapply(df3[INSTVARS], function(x){
     if(is.numeric(x)==TRUE){
-      means<-aggregate(x ~ df3$CLUSTER, FUN=mean, na.action=na.omit)
+      means<-aggregate(x ~ df$CLUSTER, FUN=mean, na.action=na.omit)
       print(means)[,2]
       }
     else{
-      prop.table(table(x, df3$CLUSTER),2)
+      prop.table(table(x, df$CLUSTER),2)
       }
   }))
 kable(list, caption = "Distribution of Adjunct Types by Institutional Characteristics")
