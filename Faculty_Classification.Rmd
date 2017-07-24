@@ -18,8 +18,10 @@ Built with `r getRversion()`.  Last run on `r params$d`.
 * [Munge](#munge)
 * [Exploratory Analysis](#exploratory)
     + [Missing Data](#missing)
-    + [Single Imputation](#impute)
-    
+* [Single Imputation](#impute)
+* [Cluster Analysis](#cluster)
+    + [K-means Clustering Algorithm](#kmeans)
+    + [Tabulations](#tables)
 
 ## Configure{#config}
 ```{r setup, include=FALSE}
@@ -41,6 +43,14 @@ Source<-"./src"
 Graph<-"./graphs"
 ```
 
+```{r src_files}
+src <- c("table.R")
+for (i in 1:length(src)) {
+  cat(paste("Loading ",src[i],"\n"))
+  source(file.path(Source,src[i]))
+}
+```
+
 ## Munge{#munge}
 ```{r Data Munge, eval=FALSE, cache=TRUE}
 source(file.path(Munge, "01_Merge_the_data.R"))
@@ -54,25 +64,21 @@ load(file.path(Private_Cache,"HERI_Class.RData"))
 ```
 
 
- Multiple Imputation was the preferred method when our
-data structure was more complicated (high dimensions, high cluster overlap),
+We will perform cluster analysis on all variables relating to job attitudes, work activities and experiences.  Let's identify all the variables in our data that do not reach this criteria and remove them from the data.  Also, many variables in these data only pertain to part-time faculty.  So many faculty do not have responses to these part-time faculty questions.  Those variables were removed from the first cluster analysis
 
-```{r}
-# Present Day Work Conditions (also opinions and attitutdes)
-#Classify faculty based on job attitudes/activities/experiences
+```{r Variable_groupings}
 SVYVARS<-c("ACE","SUBJID","YEAR","ACERECODE","RESTYPE")
 INSTVARS<-c("DEPTA","INSTTYPE","INSTCONT","SELECTIVITY","CARNEGIE")
 DEMGVARS<-c("GENACT03","GENACT04","NCHILD1","NCHILD2","MARITAL","SEX","NATENGSP","RACEGROUP","STATE","OBEREG","MAJORA","AGE")
 PTVARS<-c("PTCHOICE","PTWORKFT","PTTSEEK","PTCAREER","PTREASON01","PTREASON02","PTREASON03","PTREASON04","PTREASON05","PTREASON06","PTREASON07","PTRESOURCES01","PTRESOURCES02","PTRESOURCES03","PTRESOURCES04","PTRESOURCES05","PTOPN01","PTOPN02","PTOPN03","PTOPN04","PTOPN05","PTOPN06","PTOPN07","PTOPN08","PTOPN09","PTOPN10","PTTEACH","PTSALARY","PTPAY")
 OTHERS<-c("DEPTDISC","SSVALID","SALARY","TENUREYR","SALARY12","CCRANK","CCSTATUS","SALARYBASE","BIRTHYR")
 
-#HIGHMISSVARS<-c()
 OMIT<-c(SVYVARS,INSTVARS,DEMGVARS,PTVARS,OTHERS)
 ```
 
 ## Exploratory Analysis{#explore}
 
-# Missing Data{#missing}
+### Missing Data{#missing}
 
 ```{r}
 miss_pct<-df %>% 
@@ -91,12 +97,15 @@ theme(axis.text.x=element_text(angle=90, hjust=1))
 tempData<-df %>% 
   select(-one_of(OMIT)) %>%
   mice(m=1,maxit=50,meth='pmm',seed=500)
-completedData <- complete(tempData,1)
+IData <- complete(tempData,1)
 ```
 
 ```{r Create_Binaries}
-dfClust<-data.frame(model.matrix(~ ., data=completedData, contrasts.arg = lapply(completedData[,sapply(completedData, is.factor)], contrasts, contrasts=FALSE)))
+dfClust<-data.frame(model.matrix(~ ., data=IData, contrasts.arg = lapply(completedData[,sapply(IData, is.factor)], contrasts, contrasts=FALSE)))
 ```
+
+## Determine the number of Clusters.
+I used the "elbow method"
 
 ```{r Determin_Number_Clusters}
 wssplot <- function(data, nc=15, seed=1234){
@@ -109,17 +118,18 @@ wssplot <- function(data, nc=15, seed=1234){
 wssplot(dfClust, nc=7) # put in # of clusters here
 ```
 
-```{r K_means}
+## Cluster Analysis{#cluster}
+Five clusters appears to be the best fit, according to the elbow method.
+
+```{r K_means_procedure}
 Clust<- dfClust %>%
   kmeans(5, nstart = 20)
-Clust
 ```
 
 ```{r add_clusters}
 CLUSTER<-Clust$cluster
 df<-cbind(df,CLUSTER)
 ```
-
 
 ```{r demography_table}
 options(digits=2)
@@ -134,7 +144,6 @@ list<-do.call(rbind, sapply(df[DEMGVARS], function(x){
   }))
 kable(list, caption = "Distribution of Adjunct Types by Demographic Characteristics")
 ```
-
 
 ```{r Institution_table}
 list<-do.call(rbind, sapply(df3[INSTVARS], function(x){
