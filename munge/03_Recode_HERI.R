@@ -74,3 +74,17 @@ df<- df %>%
                        `Southeast - AL AR FL GA KY LA MS NC SC TN VA WV`="South",
                        `Southwest - AZ NM OK TX`="West"))
 df$OBEREG<-relevel(df$OBEREG,"East")
+
+df$MARITAL2<-df$MARITAL; levels(df$MARITAL2)<-c("Not","Married","Not","Not","Married","Not") # cohab=married
+df$RACEGROUP2<-df$RACEGROUP; levels(df$RACEGROUP2)<-c(rep("Minority",6),"White") # cohab=married
+df$NCHILD3<-as.factor(as.numeric(df$NCHILD1)-1+as.numeric(df$NCHILD2)-1)
+levels(df$NCHILD3)<-c("No Children","One Child",rep("Multiple Children",7)) # cohab=married
+
+levels(df$GENACT01) <- c("Non-Union", "Union") #Act: Are you a member of a faculty union?
+
+df$HEALTHBENEFITS=df$SATIS02; levels(df$HEALTHBENEFITS)=c("Health Ins", "No Health Ins",rep("Health Ins",3)) #Not Applicable means "No insureance"
+df$RETIREBENEFITS=df$SATIS03; levels(df$RETIREBENEFITS)=c("Retirement","No Retirement",rep("Retirement",3))
+
+df$HPW10=HPW10; # outside consulting
+df$HPW13=HPW13; levels(df$HPW13) <- c("None","A little","A little","Some","Some","Some","Some","Extensive","Extensive") # other outside work
+"HPW10Q"         "HPW13Q" 

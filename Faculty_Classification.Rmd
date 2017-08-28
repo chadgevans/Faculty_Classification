@@ -9,30 +9,22 @@ params:
  d: !r Sys.Date() 
 
 ---
-Built with `r getRversion()`.  Last run on `r params$d`.
+Built with R version `r getRversion()`.  Last run on `r params$d`.
 
-* [Configure](#config)
+* [Configure](#configure)
+    + Directories
     + Libraries
-    + directories
-    + data
 * [Munge](#munge)
-* [Exploratory Analysis](#exploratory)
-    + [Missing Data](#missing)
-* [Single Imputation](#impute)
-* [Cluster Analysis](#cluster)
-    + [K-means Clustering Algorithm](#kmeans)
-    + [Tabulations](#tables)
+* [Exploratory Analysis](#exploratory-analysis)
+    + Missing Data
+    + Imputation
+* [Cluster Analysis](#cluster-analysis)
+    + K-means Clustering Algorithm
+* [Tabulations](#tabulations)
 
-## Configure{#config}
+## Configure
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message=FALSE, fig.width=10, fig.height=10, fig.path='graphs/', cache.path ='cache/')
-```
-
-```{r Libraries, include=FALSE, eval=TRUE, echo=TRUE, warning=TRUE,error=FALSE, message=TRUE, tidy=TRUE, results='markup', cache=FALSE, fig.width=7, fig.height=7}
-library(tidyverse)
-library(stats)
-library(mice)
-library(knitr)
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, fig.width=7, fig.height=7, fig.path='graphs/', cache.path ='cache/')
 ```
 
 ```{r Directories, include=FALSE}
@@ -41,48 +33,58 @@ Raw<-"/Users/chadgevans/Research/Projects/Data/HERI/Raw"
 Munge<-"./munge"
 Source<-"./src"
 Graph<-"./graphs"
+Libraries<-"./lib"
 ```
 
-```{r src_files}
-src <- c("table.R")
-for (i in 1:length(src)) {
-  cat(paste("Loading ",src[i],"\n"))
-  source(file.path(Source,src[i]))
-}
+```{r Libraries, include=FALSE, eval=TRUE, echo=TRUE, warning=TRUE,error=FALSE, message=TRUE, tidy=TRUE, results='markup', cache=FALSE, fig.width=7, fig.height=7}
+library(tidyverse)
+library(stats)
+library(mice)
+library(knitr)
+source(file.path(Libraries, "nfCrossTable.R"))
 ```
 
-## Munge{#munge}
-```{r Data Munge, eval=FALSE, cache=TRUE}
+## Munge
+```{r Munge}
+load(file.path(Private_Cache,"HERI_Class.RData"))
 source(file.path(Munge, "01_Merge_the_data.R"))
 source(file.path(Munge, "02_Clean_the_data.R"))
-source(file.path(Munge, "Recode_HERI.R"))
-save(df, file=file.path(Private_Cache,"HERI_Class.RData"))
+df<-as_data_frame(df)
 ```
 
-```{r Clean Data Import}
-load(file.path(Private_Cache,"HERI_Class.RData"))
-```
-
-
-We will perform cluster analysis on all variables relating to job attitudes, work activities and experiences.  Let's identify all the variables in our data that do not reach this criteria and remove them from the data.  Also, many variables in these data only pertain to part-time faculty.  So many faculty do not have responses to these part-time faculty questions.  Those variables were removed from the first cluster analysis
-
-```{r Variable_groupings}
+```{r Variables}
 SVYVARS<-c("ACE","SUBJID","YEAR","ACERECODE","RESTYPE")
 INSTVARS<-c("DEPTA","INSTTYPE","INSTCONT","SELECTIVITY","CARNEGIE")
-DEMGVARS<-c("GENACT03","GENACT04","NCHILD1","NCHILD2","MARITAL","SEX","NATENGSP","RACEGROUP","STATE","OBEREG","MAJORA","AGE")
+DEMGVARS<-c("GENACT03","GENACT04","NCHILD1","NCHILD2","MARITAL","SEX","NATENGSP","RACEGROUP","MAJORA","AGE")
 PTVARS<-c("PTCHOICE","PTWORKFT","PTTSEEK","PTCAREER","PTREASON01","PTREASON02","PTREASON03","PTREASON04","PTREASON05","PTREASON06","PTREASON07","PTRESOURCES01","PTRESOURCES02","PTRESOURCES03","PTRESOURCES04","PTRESOURCES05","PTOPN01","PTOPN02","PTOPN03","PTOPN04","PTOPN05","PTOPN06","PTOPN07","PTOPN08","PTOPN09","PTOPN10","PTTEACH","PTSALARY","PTPAY")
-OTHERS<-c("DEPTDISC","SSVALID","SALARY","TENUREYR","SALARY12","CCRANK","CCSTATUS","SALARYBASE","BIRTHYR")
+OTHERS<-c("DEPTDISC","SALARY","TENUREYR","SALARY12","CCRANK","CCSTATUS","SALARYBASE","BIRTHYR","STATE","OBEREG")
 
 OMIT<-c(SVYVARS,INSTVARS,DEMGVARS,PTVARS,OTHERS)
 ```
 
-## Exploratory Analysis{#explore}
+```{r, eval=FALSE}
+lwdata<-df %>% select(-one_of(OMIT)) %>% na.omit()
+save(lwdata, file=file.path(Private_Cache,"lwdata.RData"))
 
+#Imputing takes 2-3 hours
+tempData<-df %>% select(-one_of(OMIT)) %>% mice(m=1,maxit=50,meth='pmm',seed=500)
+save(tempData, file=file.path(Private_Cache,"tempData.RData"))
+IData <- complete(tempData,1)
+save(IData, file=file.path(Private_Cache,"IData.RData"))
+```
+
+## Data
+```{r reload_data}
+load(file.path(Private_Cache,"lwdata.RData")) # listwise deleted data
+load(file.path(Private_Cache,"IData.RData")) # Singly imputed data
+data<-IData
+```
+
+## Exploratory Analysis
 ### Missing Data{#missing}
 
 ```{r}
-miss_pct<-df %>% 
-  select(-one_of(OMIT)) %>%
+miss_pct<-df %>% select(-one_of(OMIT)) %>%
   map_dbl(function(x) { round((sum(is.na(x)) / length(x)) * 100, 1) })
 data.frame(miss=miss_pct, var=names(miss_pct), row.names=NULL) %>%
 ggplot(aes(x=reorder(var, -miss), y=miss)) +
@@ -91,71 +93,67 @@ labs(x='', y='% missing', title='Percent missing data by feature') +
 theme(axis.text.x=element_text(angle=90, hjust=1))
 ```
 
-## Single Imputation{#impute}
+The missingness in these data is very low.  About 20 variables have 3-10 percent missing.  The vast majority have trivial amounts of missingness.  When applying listwise deletion, `r 100*(nrow(df)-nrow(na.omit(df)))/ nrow(df)` percent of observations are lot.  This is because there are so many covariates and the missingness really adds up.  It is still worth considering listwise deletion.  We'll compare the results with a dataset that has been singly imputated, in order to capitalize on all available information.  Single imputation is less concerning here because we are not interested in standard errors.  We just are trying to induce a classification schema.  
 
-```{r Impute_data, cache=TRUE}
-tempData<-df %>% 
-  select(-one_of(OMIT)) %>%
-  mice(m=1,maxit=50,meth='pmm',seed=500)
-IData <- complete(tempData,1)
-```
-
-```{r Create_Binaries}
-dfClust<-data.frame(model.matrix(~ ., data=IData, contrasts.arg = lapply(completedData[,sapply(IData, is.factor)], contrasts, contrasts=FALSE)))
-```
+## Analysis
 
 ## Determine the number of Clusters.
 I used the "elbow method"
 
-```{r Determin_Number_Clusters}
+```{r Create_Binaries}
+data<-data.frame(model.matrix(~ ., data=data , contrasts.arg = lapply(data[,sapply(data, is.factor)], contrasts, contrasts=FALSE)))
+```
+
+```{r Determining_Number_Clusters}
 wssplot <- function(data, nc=15, seed=1234){
   wss <- (nrow(data)-1)*sum(apply(data,2,var))
   for (i in 2:nc){
     set.seed(seed)
-    wss[i] <- sum(kmeans(data, centers=i)$withinss)}
-  plot(1:nc, wss, type="b", xlab="Number of Clusters",
-       ylab="Within groups sum of squares")}
-wssplot(dfClust, nc=7) # put in # of clusters here
+    wss[i] <- sum(kmeans(data, centers=i)$withinss)
+  }
+  plot(1:nc, wss, type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
+}
+
+wssplot(data, nc=7) # put in # of clusters here
 ```
 
-## Cluster Analysis{#cluster}
-Five clusters appears to be the best fit, according to the elbow method.
+## Cluster Analysis
+For both imputed data and listwise deletion, elbow plots suggests four or five clusters.  I'll go with four.
 
 ```{r K_means_procedure}
-Clust<- dfClust %>%
-  kmeans(5, nstart = 20)
+kmeans.obj<- data %>% kmeans(4, nstart = 20)
+df$cluster<-kmeans.obj$cluster
 ```
 
-```{r add_clusters}
-CLUSTER<-Clust$cluster
-df<-cbind(df,CLUSTER)
+
+## Tabulations
+```{r Table_Recode}
+source(file.path(Munge, "03_Recode_HERI.R"))
 ```
 
 ```{r demography_table}
-options(digits=2)
-list<-do.call(rbind, sapply(df[DEMGVARS], function(x){
-    if(is.numeric(x)==TRUE){
-      means<-aggregate(x ~ df$CLUSTER, FUN=mean, na.action=na.omit)
-      print(means)[,2]
-      }
-    else{
-      prop.table(table(x, df$CLUSTER),2)
-      }
-  }))
-kable(list, caption = "Distribution of Adjunct Types by Demographic Characteristics")
-```
-
-```{r Institution_table}
-list<-do.call(rbind, sapply(df3[INSTVARS], function(x){
-    if(is.numeric(x)==TRUE){
-      means<-aggregate(x ~ df$CLUSTER, FUN=mean, na.action=na.omit)
-      print(means)[,2]
-      }
-    else{
-      prop.table(table(x, df$CLUSTER),2)
-      }
-  }))
-kable(list, caption = "Distribution of Adjunct Types by Institutional Characteristics")
+DemVars<-c("AGE","SEX","MARITAL2","RACEGROUP2","NCHILD3","NATENGSP") #"MAJORA" GENACT03","GENACT04
+table<-round(nfCrossTable(data=df[DemVars],CTvar=df$cluster),2)
+colnames(table)<-c("Cluster1","Cluster2","Cluster3","Cluster4")
+rownames(table)<-c("Age","Male","Married","White","No Children","One Child","Multiple Children","Native English")
+kable(table, caption = "Distribution of Adjunct Types by Demographic Characteristics")
 ```
 
 
+```{r institution_table}
+INSTVARS<-c("INSTTYPE","INSTCONT","CARNEGIE","BIGLAN","SELECTIVITY") # DEPTA was aggregated by HERI
+table<-round(nfCrossTable(data=df[INSTVARS],CTvar=df$cluster),2)
+colnames(table)<-c("Cluster1","Cluster2","Cluster3","Cluster4")
+rownames(table)<-c("2-year","4-year","University","Public","Research I","Associates","Bachelors/Masters","R3/Doctoral","Research II","Other Inst.","Hard/Applied","Hard/Pure","Soft/Applied","Soft/Pure","Other Biglan","Selectivity (by entrace exam)")
+kable(table, caption = "Distribution of Adjunct Types by Institutional Characteristics")
+```
+
+```{r Employment_Conditions}
+EmployVars<-df[,c("HPW10Q","HPW13Q","HEALTHBENEFITS", "RETIREBENEFITS","GENACT01","SALARY","INCOME")]
+table<-round(nfCrossTable(data=df[EmployVars],CTvar=df$cluster),2)
+colnames(table)<-c("Cluster1","Cluster2","Cluster3","Cluster4")
+#rownames(table)<-c("2-year","4-year","University","Public","Research I","Associates","Bachelors/Masters","R3/Doctoral","Research II","Other Inst.","Hard/Applied","Hard/Pure","Soft/Applied","Soft/Pure","Other Biglan","Selectivity (by entrace exam)")
+kable(table, caption = "Distribution of Adjunct Types by Institutional Characteristics")
+
+#rownames(list)[c(1:2,9,10)]<-c("Hrs Outside Consulting","Hrs Outside Employment", "Inst. Salary","Income")
+```
