@@ -1,6 +1,7 @@
 # Salary and Income
 df$SALARYALL=pmax(df$SALARY, df$PTSALARY, na.rm = TRUE) # returns the max of the two
-df$AGE<-2010-df$BIRTHYR
+
+df$AGE<-2010-df$BIRTHYR # other age varaible is cut in intervals for some reason
 
 df<- df %>% 
   mutate(CARNEGIE = recode(CARNEGIE, `RU/VH: Research Universities (very high research activity)`="R1",  
@@ -25,7 +26,7 @@ df<- df %>%
                            `Spec/Faith: Special Focus Institutions--Theological seminaries, Bible colleges, and other faith-related institutions`="Other",
                            `Spec/Health: Special Focus Institutions--Other health professions schools`="Other",                                           
                            `Spec/Other: Special Focus Institutions--Other special-focus institutions`="Other", `-3` = NA_character_))
-df$CARNEGIE<-relevel(df$CARNEGIE,"R1")
+df$CARNEGIE<-factor(df$CARNEGIE,levels = c("R1","R2","R3/Doctoral","Bachelors/Masters","Associates","Other"))
 
 df<- df %>% 
   mutate(BIGLAN = recode(DEPT, `Agriculture/natural resources/related`="Hard/Applied",
@@ -80,11 +81,76 @@ df$RACEGROUP2<-df$RACEGROUP; levels(df$RACEGROUP2)<-c(rep("Minority",6),"White")
 df$NCHILD3<-as.factor(as.numeric(df$NCHILD1)-1+as.numeric(df$NCHILD2)-1)
 levels(df$NCHILD3)<-c("No Children","One Child",rep("Multiple Children",7)) # cohab=married
 
+# Professional Development factor
+profdf<-df %>% select(starts_with("PROFDEV")) %>% as.data.frame
+PROFDEVvars<-df %>% select(starts_with("PROFDEV")) %>% names() 
+for(i in PROFDEVvars){
+  levels(profdf[,i])=c(rep("0",3),"1")
+  profdf[,i]<-as.numeric(profdf[,i])-1
+}
+pca<-princomp(~ ., data = profdf, na.action=na.exclude)
+df$PROFDEVFAC<--(pca$scores[,1]) # I think this is the scores (for comp 1). sign is negative so inverse it.
+
 levels(df$GENACT01) <- c("Non-Union", "Union") #Act: Are you a member of a faculty union?
+levels(df$GENACT02) <- c("Non-Citizen", "Citizen") #Act: Are you a member of a faculty union?
+
+df<- df %>%
+  mutate(DEGWORK2=recode(DEGWORK, `Bachelors (B.A., B.S., etc.)`="Yes",                                   
+                        `Ed.D.`="Yes",
+                        `LL.B., J.D.`="Yes",
+                        `M.D., D.D.S. (or equivalent)`="Yes",
+                        `Masters (M.A., M.S., M.F.A., M.B.A., etc.)`="Yes",
+                        `None`="No",
+                        `Other degree`="Yes",
+                        `Other first professional degree beyond B.A. (e.g., D.D., D.V.M.)`="Yes",
+                        `Ph.D.`="Yes"))
+df$DEGWORK2<-relevel(df$DEGWORK2,"No")
+
+
+df<- df %>%
+  mutate(DEGEARN2=recode(DEGEARN, `Bachelors (B.A., B.S., etc.)`="BA or Less",                                   
+                         `Ed.D.`="Prof Degree",
+                         `LL.B., J.D.`="Prof Degree",
+                         `M.D., D.D.S. (or equivalent)`="Prof Degree",
+                         `Masters (M.A., M.S., M.F.A., M.B.A., etc.)`="Prof Degree",
+                         `None`="BA or Less", 
+                         `Other degree`="BA or Less", # Assuming this means less, like an assoc. degree
+                         `Other first professional degree beyond B.A. (e.g., D.D., D.V.M.)`="Prof Degree",
+                         `Ph.D.`="Ph.D."))
+
+df$SELECTIVITY2=cut(df$SELECTIVITY, breaks=quantile(df$SELECTIVITY, probs = c(0,.9,1),na.rm=T))  # defined as median SAT math and verbal (or ACT composite) of 1st time freshmen
+levels(df$SELECTIVITY2)<-c("Not","Selective")
+
+df<- df %>%
+  mutate(INSTDESCR03=recode(INSTDESCR03, `Not descriptive`="Not very",                                   
+                         `Somewhat descriptive`="Not very",
+                         `Very descriptive`="Very"))
+
+df<- df %>%
+  mutate(INSTDESCR08=recode(INSTDESCR08, `Not descriptive`="Not very",                                   
+                            `Somewhat descriptive`="Not very",
+                            `Very descriptive`="Very"))
+
+df<- df %>%
+  mutate(INSTOPN10=recode(INSTOPN10, `Agree somewhat`="Agree",                                   
+                          `Agree strongly`="Agree",
+                          `Disagree somewhat`="Disagree",
+                          `Disagree strongly`="Disagree"))
+df$INSTOPN10<-relevel(df$INSTOPN10,"Disagree")
+
+
+df<- df %>%
+  mutate(INSTOPN11=recode(INSTOPN11, `Agree somewhat`="Agree",                                   
+                          `Agree strongly`="Agree",
+                          `Disagree somewhat`="Disagree",
+                          `Disagree strongly`="Disagree"))
+df$INSTOPN11<-relevel(df$INSTOPN11,"Disagree")
 
 df$HEALTHBENEFITS=df$SATIS02; levels(df$HEALTHBENEFITS)=c("Health Ins", "No Health Ins",rep("Health Ins",3)) #Not Applicable means "No insureance"
-df$RETIREBENEFITS=df$SATIS03; levels(df$RETIREBENEFITS)=c("Retirement","No Retirement",rep("Retirement",3))
+df$HEALTHBENEFITS<-relevel(df$HEALTHBENEFITS,"No Health Ins")
 
-df$HPW10=HPW10; # outside consulting
-df$HPW13=HPW13; levels(df$HPW13) <- c("None","A little","A little","Some","Some","Some","Some","Extensive","Extensive") # other outside work
-"HPW10Q"         "HPW13Q" 
+df$RETIREBENEFITS=df$SATIS03; levels(df$RETIREBENEFITS)=c("Retirement","No Retirement",rep("Retirement",3))
+df$RETIREBENEFITS<-relevel(df$RETIREBENEFITS,"No Retirement")
+
+df$PRINACT2<-df$PRINACT; levels(df$PRINACT2)[4]<-"Other"
+df$PRINACT2<-factor(df$PRINACT2,levels = c("Teaching","Research","Administration","Other"))

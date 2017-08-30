@@ -12,6 +12,7 @@ df <- as.data.frame(unclass(df)) # convert character vectors to factors
 
 # apostrophe is screwing up recoding, drop it.
 levels(df$DEGEARN)[c(1,5)]<-c("Bachelors (B.A., B.S., etc.)", "Masters (M.A., M.S., M.F.A., M.B.A., etc.)")
+levels(df$DEGWORK)[c(1,5)]<-c("Bachelors (B.A., B.S., etc.)", "Masters (M.A., M.S., M.F.A., M.B.A., etc.)")
 
 rm(HERImerged)
 

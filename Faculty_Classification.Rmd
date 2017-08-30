@@ -41,6 +41,7 @@ library(tidyverse)
 library(stats)
 library(mice)
 library(knitr)
+library(stats)
 source(file.path(Libraries, "nfCrossTable.R"))
 ```
 
@@ -49,17 +50,17 @@ source(file.path(Libraries, "nfCrossTable.R"))
 load(file.path(Private_Cache,"HERI_Class.RData"))
 source(file.path(Munge, "01_Merge_the_data.R"))
 source(file.path(Munge, "02_Clean_the_data.R"))
-df<-as_data_frame(df)
+source(file.path(Munge, "HERI_vars.R"))
 ```
 
-```{r Variables}
-SVYVARS<-c("ACE","SUBJID","YEAR","ACERECODE","RESTYPE")
-INSTVARS<-c("DEPTA","INSTTYPE","INSTCONT","SELECTIVITY","CARNEGIE")
-DEMGVARS<-c("GENACT03","GENACT04","NCHILD1","NCHILD2","MARITAL","SEX","NATENGSP","RACEGROUP","MAJORA","AGE")
-PTVARS<-c("PTCHOICE","PTWORKFT","PTTSEEK","PTCAREER","PTREASON01","PTREASON02","PTREASON03","PTREASON04","PTREASON05","PTREASON06","PTREASON07","PTRESOURCES01","PTRESOURCES02","PTRESOURCES03","PTRESOURCES04","PTRESOURCES05","PTOPN01","PTOPN02","PTOPN03","PTOPN04","PTOPN05","PTOPN06","PTOPN07","PTOPN08","PTOPN09","PTOPN10","PTTEACH","PTSALARY","PTPAY")
-OTHERS<-c("DEPTDISC","SALARY","TENUREYR","SALARY12","CCRANK","CCSTATUS","SALARYBASE","BIRTHYR","STATE","OBEREG")
+```{r Variables, eval=FALSE}
+df<-df %>% select(one_of(c(ADMINVARS,WORKVARS,SALARYVARS,INSTVARS,BACKVARS,ATTITUDEVARS,OTHERVARS,PROFDEVVARS, FACTORVARS, PRODUCTIVITYVARS,STRESSVARS,SATISVARS,PTVARS)))
 
 OMIT<-c(SVYVARS,INSTVARS,DEMGVARS,PTVARS,OTHERS)
+```
+
+```{r eval=FALSE}
+df<-df %>% filter(!(TENURE=="Tenured")) # reduces from 8980 to 8450
 ```
 
 ```{r, eval=FALSE}
@@ -75,7 +76,6 @@ save(IData, file=file.path(Private_Cache,"IData.RData"))
 
 ## Data
 ```{r reload_data}
-load(file.path(Private_Cache,"lwdata.RData")) # listwise deleted data
 load(file.path(Private_Cache,"IData.RData")) # Singly imputed data
 data<-IData
 ```
@@ -83,7 +83,7 @@ data<-IData
 ## Exploratory Analysis
 ### Missing Data{#missing}
 
-```{r}
+```{r eval=FALSE}
 miss_pct<-df %>% select(-one_of(OMIT)) %>%
   map_dbl(function(x) { round((sum(is.na(x)) / length(x)) * 100, 1) })
 data.frame(miss=miss_pct, var=names(miss_pct), row.names=NULL) %>%
@@ -121,39 +121,49 @@ wssplot(data, nc=7) # put in # of clusters here
 For both imputed data and listwise deletion, elbow plots suggests four or five clusters.  I'll go with four.
 
 ```{r K_means_procedure}
+# data<-scale(data) CONSIDER WHEATHER TO SCALE
 kmeans.obj<- data %>% kmeans(4, nstart = 20)
 df$cluster<-kmeans.obj$cluster
 ```
-
 
 ## Tabulations
 ```{r Table_Recode}
 source(file.path(Munge, "03_Recode_HERI.R"))
 ```
 
-```{r demography_table}
-DemVars<-c("AGE","SEX","MARITAL2","RACEGROUP2","NCHILD3","NATENGSP") #"MAJORA" GENACT03","GENACT04
-table<-round(nfCrossTable(data=df[DemVars],CTvar=df$cluster),2)
-colnames(table)<-c("Cluster1","Cluster2","Cluster3","Cluster4")
-rownames(table)<-c("Age","Male","Married","White","No Children","One Child","Multiple Children","Native English")
-kable(table, caption = "Distribution of Adjunct Types by Demographic Characteristics")
+```{r}
+table(df$cluster)
+Clusternames<-c("Cluster1 (n=3855)","Cluster2 (n=10)","Cluster3 (n=1093)","Cluster4 (n=4022)")
 ```
 
+```{r demography_table}
+DemVars<-c("AGE","SEX","MARITAL2","NCHILD3","RACEGROUP2","GENACT02","NATENGSP","DEGEARN2","DEGWORK2")
+table<-round(nfCrossTable(data=df[DemVars],CTvar=df$cluster),2)
+colnames(table)<-Clusternames
+rownames(table)<-c("Age","Male","Married","No Children","One Child","Multiple Children","White","Citizen","Native English","BA or Less","Prof Degree","Ph.D.","Working on a Degree")
+kable(table, caption = "Distribution of Adjunct Clusters by Demographic Characteristics")
+```
 
 ```{r institution_table}
-INSTVARS<-c("INSTTYPE","INSTCONT","CARNEGIE","BIGLAN","SELECTIVITY") # DEPTA was aggregated by HERI
+INSTVARS<-c("INSTTYPE","INSTCONT","CARNEGIE","BIGLAN","SELECTIVITY2","INSTDESCR03","INSTDESCR08","INSTOPN10","INSTOPN11")
 table<-round(nfCrossTable(data=df[INSTVARS],CTvar=df$cluster),2)
-colnames(table)<-c("Cluster1","Cluster2","Cluster3","Cluster4")
-rownames(table)<-c("2-year","4-year","University","Public","Research I","Associates","Bachelors/Masters","R3/Doctoral","Research II","Other Inst.","Hard/Applied","Hard/Pure","Soft/Applied","Soft/Pure","Other Biglan","Selectivity (by entrace exam)")
-kable(table, caption = "Distribution of Adjunct Types by Institutional Characteristics")
+colnames(table)<-Clusternames
+rownames(table)<-c("2-year","4-year","University","Public","Research I","Research II","R3/Doctoral","Bachelors/Masters","Associates","Other Inst.","Hard/Applied","Hard/Pure","Soft/Applied","Soft/Pure","Other Biglan","Highly Selective","Faculty very respectful","Administators very considerate","Research valued","Teaching valued")
+kable(table, caption = "Distribution of Adjunct Clusters by Institutional Characteristics")
+```
+
+```{r dept_table}
+table<-round(prop.table(table(df$DEPTA, df$cluster),2),2) # DEPTA was aggregated by HERI
+colnames(table)<-Clusternames
+rownames(table)<-c("Agri/Forestry","Biology","Business","Education","Engineering","English","Fine Arts","Health-related","History/PoliSci","Humanities","Math/Stas","Non-technical","Technical","Physical Sciences","Social Sciences")
+kable(table, caption = "Distribution of Adjunct Clusters by Departmental Characteristics")
 ```
 
 ```{r Employment_Conditions}
-EmployVars<-df[,c("HPW10Q","HPW13Q","HEALTHBENEFITS", "RETIREBENEFITS","GENACT01","SALARY","INCOME")]
-table<-round(nfCrossTable(data=df[EmployVars],CTvar=df$cluster),2)
-colnames(table)<-c("Cluster1","Cluster2","Cluster3","Cluster4")
-#rownames(table)<-c("2-year","4-year","University","Public","Research I","Associates","Bachelors/Masters","R3/Doctoral","Research II","Other Inst.","Hard/Applied","Hard/Pure","Soft/Applied","Soft/Pure","Other Biglan","Selectivity (by entrace exam)")
-kable(table, caption = "Distribution of Adjunct Types by Institutional Characteristics")
+WORKVARS<-c("PRINACT2","FULLSTAT","ACADRANK","GENACT01","HEALTHBENEFITS", "RETIREBENEFITS","SALARYALL","COURSENUM")
+table<-round(nfCrossTable(data=df[WORKVARS],CTvar=df$cluster),2)
+colnames(table)<-Clusternames
+rownames(table)<-c("Teaching","Research","Administration","Other","Full-time","Assistant Professor","Associate Professor","Instructor","Lecturer","Professor","Union member","Health benefits","Retirement","Avg. Salary","Avg. Courses")
+kable(table, caption = "Distribution of Adjunct Clusters by Work Characteristics")
 
-#rownames(list)[c(1:2,9,10)]<-c("Hrs Outside Consulting","Hrs Outside Employment", "Inst. Salary","Income")
 ```
