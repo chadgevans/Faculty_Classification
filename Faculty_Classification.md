@@ -24,6 +24,7 @@ Contents
     -   [Institution Table](#institution-table)
     -   [Department Table](#departmental-table)
     -   [Employment Table](#employment-table)
+-   [Conclusion](#conclusion)
 
 Configure
 ---------
@@ -186,6 +187,8 @@ kable(table, caption = "Distribution of Adjunct Clusters by Demographic Characte
 | Ph.D.               |                0.38|               0.38|                0.14|                0.36|
 | Working on a Degree |                0.24|               0.13|                0.19|                0.20|
 
+Generally, the different clusters of adjuncts do not differ substantialy with regard to demography. However, cluster 1 may tend to have fewer children, often no children. Cluster 3 tends to have a greater concentration of professional degrees, rather than ph.d.'s. Cluster 2 may be a bit more established in their education, as fewer of them are currently working on an additional degree.
+
 ### Institution Table
 
 ``` r
@@ -219,6 +222,9 @@ kable(table, caption = "Distribution of Adjunct Clusters by Institutional Charac
 | Research valued                |                0.40|               0.70|                0.66|                0.81|
 | Teaching valued                |                0.74|               0.86|                0.95|                0.98|
 
+Cluster 2 tends to be found more often in research instiution. Other adjunct types more commonly work in liberal arts institutions issuing BAs and other lower-tier degrees.
+Cluster 1 has a tendency to work in the soft science, pure fields (e.g. social sicences, languages, interdisciplinary studies, and philosophy). Cluster 2 is disproportionately found in "other" institutions, although it is unclear from HERI what might be included in that "other" category. Cluster 3 tend to work in non-selective institutions (moreso than other cluster categories). Cluster 1 tends to view other faculty members as less respectful (only a quarter of their collegues are viewed as very respectful). They also view administrators more harshly than the other clusters. Not surprisingly, they are less likely to say that their teaching and research are valued.
+
 ### Departmental Table
 
 ``` r
@@ -245,6 +251,8 @@ kable(table, caption = "Distribution of Adjunct Clusters by Departmental Charact
 | Technical         |                0.03|               0.02|                0.04|                0.03|
 | Physical Sciences |                0.03|               0.04|                0.01|                0.05|
 | Social Sciences   |                0.09|               0.08|                0.10|                0.09|
+
+Now let's look at departments in particular. Cluster 3 have a greater tendency to work in business schools. Cluster 1, again, are more likely to work in English, Fine Arts, and the humanities, although their percentage in the social sciences looks comparative to the other clusters. They are also less likely to work in Education departments. Cluster 2 have a greater tendency of working in non-technical fields and also health-related fields (along with cluster 4).
 
 ### Employment Table
 
@@ -274,3 +282,12 @@ kable(table, caption = "Distribution of Adjunct Clusters by Work Characteristics
 | Avg. Salary         |            35363.96|           73436.25|            11485.56|            50186.92|
 | Avg. Courses        |                3.20|               1.09|                1.86|                3.04|
 | Prof. Dev. Rating   |               -0.06|               0.35|               -0.37|                0.23|
+
+Cluster 2, it is clear, tend to be administrators. The other clusters tend to be teachers. Most of cluster 2 works full-time. In contrast, almost all cluster 3 adjuncts work part-time. Cluster 3 adjuncts also only rarely hold a distinguished academic rank. Instead they tend to be classified as lecturers and instructors. Cluster 1 are more likely to be unionized and they also tend to more often have health and retirement benefits. The cluster 2 administrative adjuncts and cluster 4 adjuncts regularly have such benefits, but they are rarely union positions.
+
+Cluster 3, the group with so many part-time faculty, tend to earn the lowest salaries. They also get the least amount of professional development. Cluster 1, which appear to be something of an aspiring adjunct, earn modest salaries and tend to teach the most courses. Clusters 2 and 4 tend to earn the highest salaries and they also tend to get professional development. But whereas cluster 2 tend to be administrators, cluster 4 are teachers averaging 3 classes a term.
+
+Conclusion
+----------
+
+The employment characteristics tend to offer the most coherent understanding of who these adjuncts are and what they are doing in academia. The dimensions of full-time status, administration/teaching status and compensatory variables tend to most clearly distinguish adjunct times. One might conclude that cluster 1 constitutes the "aspiring academic of the soft sciences" Cluster two is probably an "administrative adjunct." Cluster 3 is probably the "part-time adjunct." Adjunct 4 is the "aspiring academic of the hard and applied fields."
