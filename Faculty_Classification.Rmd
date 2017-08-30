@@ -11,6 +11,7 @@ params:
 ---
 Built with R version `r getRversion()`.  Last run on `r params$d`.
 
+## Contents
 * [Configure](#configure)
     + Directories
     + Libraries
@@ -64,8 +65,9 @@ source(file.path(Munge, "HERI_vars.R"))
 raw_n<-nrow(df)
 df<-df %>% filter(!(TENURE=="Tenured")) # reduces from 8980 to 8450
 filtered_n<-nrow(df)
-#The original data had `r raw_n` observations.  After removing part-time faculty with Tenure, we have a total of #`r filtered_n`.  This is a decrease of `r (raw_n-filtered_n)/raw_n`.
 ```
+
+The original 2010 HERI data had 8980 observations.  After removing part-time faculty with Tenure (an anomoly outside the scope of this research), we have a total of 8450 faculty.
 
 ### Missing Data
 
@@ -79,23 +81,31 @@ labs(x='', y='% missing', title='Percent missing data by feature') +
 theme(axis.text.x=element_text(angle=90, hjust=1))
 ```
 
-The missingness in these data is very low.  About 20 variables have 3-10 percent missing.  The vast majority have trivial amounts of missingness.  When applying listwise deletion, `r 100*(nrow(df)-nrow(na.omit(df)))/ nrow(df)` percent of observations are lot.  This is because there are so many covariates and the missingness really adds up.  It is still worth considering listwise deletion.  We'll compare the results with a dataset that has been singly imputated, in order to capitalize on all available information.  Single imputation is less concerning here because we are not interested in standard errors.  We just are trying to induce a classification schema. 
-
+The missingness in these data is less concerning than it appears.  There are 31 variables missing more than 50 percent of their observations; however, this is because they are mostly only questions that pertain to part-time faculty.  Full-time faculty did not respond to this battery of questions and so these questions will not play any role in the analysis.  There are an additional 10 variables with 5-10 percent missingness.  This is not ideal, but the level of missingness is pretty small.  The vast majority of our variables (112 of them) have less than 5 percent missingness.  These will be very useful in helping identify clusters of faculty with these characteristics.  Despite this small amount of missingness, I still anticipate imputing data.  With so many features, surely listwise deletion would lead to an unacceptable deletion of most of our data.
 
 ```{r Variables}
 df<-df %>% select(one_of(c(ADMINVARS,WORKVARS,SALARYVARS,INSTVARS,BACKVARS,ATTITUDEVARS,OTHERVARS,PROFDEVVARS, FACTORVARS, PRODUCTIVITYVARS,STRESSVARS,SATISVARS,PTVARS)))
-
 HIGHMISS<-labels(which(miss_pct>50))
-OMIT<-c(ADMINVARS,PTVARS)
+OMIT<-c(ADMINVARS,PTVARS,HIGHMISS) 
+
+df$SALARYALL=pmax(df$SALARY, df$PTSALARY, na.rm = TRUE) # important to include the combined salary variable so that salary insn't exclude from the clustering.
+
+df<-df %>% select(-one_of(OMIT))
 ```
+
+We will conduct k-means clustering using as many meaningful faculty features as possible.  We remove the administrative variables like subject IDs and institution IDs that contribute no meaningful information.  We also remove all variables corresponding only to part-time faculty and the handful of other characterstics with missingness greater than 50 percent.  Our final data frame for k-means clustering consists of 8450 observations and 113 faculty features.
 
 ```{r, eval=FALSE}
 #Imputing takes 2-3 hours
-tempData<-df %>% select(-one_of(OMIT)) %>% mice(m=1,maxit=50,meth='pmm',seed=500)
+tempData<-df %>% select(-one_of(OMIT)) %>% mice(m=1,maxit=50,seed=500) # originally used meth='pmm'
 #save(tempData, file=file.path(Private_Cache,"tempData.RData"))
 IData <- complete(tempData,1)
 save(IData, file=file.path(Private_Cache,"IData.RData"))
 ```
+
+As expected, listwise deletion across 117 features is impossible.  In fact, there is not a single observation with complete data.  We thus must consider a method to deal with the missingness.  I opt for single imputiation.  In some cases, like regression, it would probably be worth multiply imputing to get standard errors correct.  However, this study is not using standard errors and is merely an experimental procedure to find coherence in the data. I thus opt to singly impute the data for reasons of simplicity.
+
+I set the maximum iterations to 50, rather than the default of 5.  This will give the chained equations more attempts to converge on a good imputed value for each cell.  Predictive mean matching was used for numeric variables. Logistic regression was used to impute binary data.  Polytomous regression imputation was used for unordered categorical variables.
 
 ## Data
 ```{r reload_data}
@@ -109,10 +119,12 @@ data<-IData
 data<-data.frame(model.matrix(~ ., data=data , contrasts.arg = lapply(data[,sapply(data, is.factor)], contrasts, contrasts=FALSE)))
 ```
 
-Some claim it is ineffective to convert categorical predictors into binaries.  In any case, that is what we do here.  This chapter is purely exploratory, so I am not concerned.
+To implement k-means clustering, all data must be numeric.  This required converting binary factors to zero and ones.  Multinomial variables needed to be converted into a matrix of dummy variables.  Some claim that it is ineffective to convert categorical predictors into binaries in this fashion.  But it is necessary if you want multinomial features to factor into the analysis.  As this chapter is descriptive and exploratory, I implemented this traditional practice of creating a matrix of numeric variables.
 
 ### Determining the number of Clusters.
-I used the "elbow method".
+
+When implementing k-means clustering, one must specify the number of means to cluster around in the data.  The most common approach to choosing the number of clusters is to plot how the within sum of squared residuals decreases as additional means are added and identify the "elbow."  This is the point where explained variation begins its platau.
+
 ```{r Determining_Number_Clusters}
 wssplot <- function(data, nc=15, seed=1234){
   wss <- (nrow(data)-1)*sum(apply(data,2,var))
@@ -125,15 +137,19 @@ wssplot <- function(data, nc=15, seed=1234){
 wssplot(data, nc=7) # put in # of clusters here
 ```
 
-The elbow plot suggests that four clusters best describe these data.  I'll go with four.
+The elbow suggests that four clusters sufficiently explain most of the variation.  I therefore opt to go witih four means in the k-means clustering analysis.
 
 ### K-Means Clustering
 ```{r K_means_procedure}
 d<-data[,-1] # git rid of the intercept (no variation, convergence issues)
 d<-scale(d)
-kmeans.obj<- d %>% kmeans(4, nstart = 20)
+kmeans.obj<- d %>% kmeans(4, nstart = 10, algorithm = c("Hartigan-Wong"))
 df$cluster<-kmeans.obj$cluster
 ```
+
+Before conducting k-means clustering, all variables were normalized so that features with the greatest ranges did not have undue influence on the formation of clusters.
+
+To conduct the k-means analysis, it is important to choose random starting points for the means.  This helps prevent the algorithm (Hartingan-Wong 1979) from converging on suboptimal means.  I used 10 different sets of starting points to identify the means that best summarize the information in the data.
 
 ## Tabulations
 ```{r Table_Recode}

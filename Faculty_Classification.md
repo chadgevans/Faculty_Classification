@@ -4,6 +4,9 @@ Chad Evans
 
 Built with R version 3.3.2. Last run on 2017-08-30.
 
+Contents
+--------
+
 -   [Configure](#configure)
     -   Directories
     -   Libraries
@@ -39,8 +42,9 @@ source(file.path(Munge, "HERI_vars.R"))
 raw_n<-nrow(df)
 df<-df %>% filter(!(TENURE=="Tenured")) # reduces from 8980 to 8450
 filtered_n<-nrow(df)
-#The original data had `r raw_n` observations.  After removing part-time faculty with Tenure, we have a total of #`r filtered_n`.  This is a decrease of `r (raw_n-filtered_n)/raw_n`.
 ```
+
+The original 2010 HERI data had 8980 observations. After removing part-time faculty with Tenure (an anomoly outside the scope of this research), we have a total of 8450 faculty.
 
 ### Missing Data
 
@@ -56,22 +60,31 @@ theme(axis.text.x=element_text(angle=90, hjust=1))
 
 ![](graphs/unnamed-chunk-1-1.png)
 
-The missingness in these data is very low. About 20 variables have 3-10 percent missing. The vast majority have trivial amounts of missingness. When applying listwise deletion, 100 percent of observations are lot. This is because there are so many covariates and the missingness really adds up. It is still worth considering listwise deletion. We'll compare the results with a dataset that has been singly imputated, in order to capitalize on all available information. Single imputation is less concerning here because we are not interested in standard errors. We just are trying to induce a classification schema.
+The missingness in these data is less concerning than it appears. There are 31 variables missing more than 50 percent of their observations; however, this is because they are mostly only questions that pertain to part-time faculty. Full-time faculty did not respond to this battery of questions and so these questions will not play any role in the analysis. There are an additional 10 variables with 5-10 percent missingness. This is not ideal, but the level of missingness is pretty small. The vast majority of our variables (112 of them) have less than 5 percent missingness. These will be very useful in helping identify clusters of faculty with these characteristics. Despite this small amount of missingness, I still anticipate imputing data. With so many features, surely listwise deletion would lead to an unacceptable deletion of most of our data.
 
 ``` r
 df<-df %>% select(one_of(c(ADMINVARS,WORKVARS,SALARYVARS,INSTVARS,BACKVARS,ATTITUDEVARS,OTHERVARS,PROFDEVVARS, FACTORVARS, PRODUCTIVITYVARS,STRESSVARS,SATISVARS,PTVARS)))
-
 HIGHMISS<-labels(which(miss_pct>50))
-OMIT<-c(ADMINVARS,PTVARS)
+OMIT<-c(ADMINVARS,PTVARS,HIGHMISS) 
+
+df$SALARYALL=pmax(df$SALARY, df$PTSALARY, na.rm = TRUE) # important to include the combined salary variable so that salary insn't exclude from the clustering.
+
+df<-df %>% select(-one_of(OMIT))
 ```
+
+We will conduct k-means clustering using as many meaningful faculty features as possible. We remove the administrative variables like subject IDs and institution IDs that contribute no meaningful information. We also remove all variables corresponding only to part-time faculty and the handful of other characterstics with missingness greater than 50 percent. Our final data frame for k-means clustering consists of 8450 observations and 113 faculty features.
 
 ``` r
 #Imputing takes 2-3 hours
-tempData<-df %>% select(-one_of(OMIT)) %>% mice(m=1,maxit=50,meth='pmm',seed=500)
+tempData<-df %>% select(-one_of(OMIT)) %>% mice(m=1,maxit=50,seed=500) # originally used meth='pmm'
 #save(tempData, file=file.path(Private_Cache,"tempData.RData"))
 IData <- complete(tempData,1)
 save(IData, file=file.path(Private_Cache,"IData.RData"))
 ```
+
+As expected, listwise deletion across 117 features is impossible. In fact, there is not a single observation with complete data. We thus must consider a method to deal with the missingness. I opt for single imputiation. In some cases, like regression, it would probably be worth multiply imputing to get standard errors correct. However, this study is not using standard errors and is merely an experimental procedure to find coherence in the data. I thus opt to singly impute the data for reasons of simplicity.
+
+I set the maximum iterations to 50, rather than the default of 5. This will give the chained equations more attempts to converge on a good imputed value for each cell. Predictive mean matching was used for numeric variables. Logistic regression was used to impute binary data. Polytomous regression imputation was used for unordered categorical variables.
 
 Data
 ----
@@ -88,11 +101,11 @@ Cluster Analysis
 data<-data.frame(model.matrix(~ ., data=data , contrasts.arg = lapply(data[,sapply(data, is.factor)], contrasts, contrasts=FALSE)))
 ```
 
-Some claim it is ineffective to convert categorical predictors into binaries. In any case, that is what we do here. This chapter is purely exploratory, so I am not concerned.
+To implement k-means clustering, all data must be numeric. This required converting binary factors to zero and ones. Multinomial variables needed to be converted into a matrix of dummy variables. Some claim that it is ineffective to convert categorical predictors into binaries in this fashion. But it is necessary if you want multinomial features to factor into the analysis. As this chapter is descriptive and exploratory, I implemented this traditional practice of creating a matrix of numeric variables.
 
 ### Determining the number of Clusters.
 
-I used the "elbow method".
+When implementing k-means clustering, one must specify the number of means to cluster around in the data. The most common approach to choosing the number of clusters is to plot how the within sum of squared residuals decreases as additional means are added and identify the "elbow." This is the point where explained variation begins its platau.
 
 ``` r
 wssplot <- function(data, nc=15, seed=1234){
@@ -108,16 +121,20 @@ wssplot(data, nc=7) # put in # of clusters here
 
 ![](graphs/Determining_Number_Clusters-1.png)
 
-The elbow plot suggests that four clusters best describe these data. I'll go with four.
+The elbow suggests that four clusters sufficiently explain most of the variation. I therefore opt to go witih four means in the k-means clustering analysis.
 
 ### K-Means Clustering
 
 ``` r
 d<-data[,-1] # git rid of the intercept (no variation, convergence issues)
 d<-scale(d)
-kmeans.obj<- d %>% kmeans(4, nstart = 20)
+kmeans.obj<- d %>% kmeans(4, nstart = 10, algorithm = c("Hartigan-Wong"))
 df$cluster<-kmeans.obj$cluster
 ```
+
+Before conducting k-means clustering, all variables were normalized so that features with the greatest ranges did not have undue influence on the formation of clusters.
+
+To conduct the k-means analysis, it is important to choose random starting points for the means. This helps prevent the algorithm (Hartingan-Wong 1979) from converging on suboptimal means. I used 10 different sets of starting points to identify the means that best summarize the information in the data.
 
 Tabulations
 -----------
@@ -133,7 +150,7 @@ print(clusters)
 
     ## 
     ##    1    2    3    4 
-    ## 2558 2242 3213  967
+    ## 2244  950 2557 3229
 
 ``` r
 C1<-paste("Cluster 1 (n=",clusters[1],")",sep = "")
@@ -153,21 +170,21 @@ rownames(table)<-c("Age","Male","Married","No Children","One Child","Multiple Ch
 kable(table, caption = "Distribution of Adjunct Clusters by Demographic Characteristics")
 ```
 
-|                     |  Cluster 1 (n=2558)|  Cluster 2 (n=2242)|  Cluster 3 (n=3213)|  Cluster 4 (n=967)|
-|---------------------|-------------------:|-------------------:|-------------------:|------------------:|
-| Age                 |               52.14|               47.37|               49.75|              50.27|
-| Male                |                0.51|                0.41|                0.44|               0.45|
-| Married             |                0.80|                0.75|                0.77|               0.79|
-| No Children         |                0.24|                0.39|                0.31|               0.28|
-| One Child           |                0.14|                0.17|                0.14|               0.14|
-| Multiple Children   |                0.63|                0.44|                0.56|               0.57|
-| White               |                0.84|                0.80|                0.85|               0.84|
-| Citizen             |                0.97|                0.93|                0.95|               0.94|
-| Native English      |                0.93|                0.88|                0.90|               0.90|
-| BA or Less          |                0.12|                0.05|                0.06|               0.06|
-| Prof Degree         |                0.75|                0.57|                0.58|               0.56|
-| Ph.D.               |                0.14|                0.38|                0.36|               0.38|
-| Working on a Degree |                0.19|                0.24|                0.20|               0.13|
+|                     |  Cluster 1 (n=2244)|  Cluster 2 (n=950)|  Cluster 3 (n=2557)|  Cluster 4 (n=3229)|
+|---------------------|-------------------:|------------------:|-------------------:|-------------------:|
+| Age                 |               47.37|              50.19|               52.14|               49.78|
+| Male                |                0.41|               0.45|                0.51|                0.44|
+| Married             |                0.75|               0.79|                0.80|                0.77|
+| No Children         |                0.39|               0.29|                0.24|                0.31|
+| One Child           |                0.17|               0.14|                0.14|                0.14|
+| Multiple Children   |                0.44|               0.57|                0.63|                0.56|
+| White               |                0.80|               0.84|                0.84|                0.85|
+| Citizen             |                0.93|               0.94|                0.97|                0.95|
+| Native English      |                0.88|               0.90|                0.93|                0.90|
+| BA or Less          |                0.05|               0.06|                0.12|                0.06|
+| Prof Degree         |                0.57|               0.56|                0.75|                0.58|
+| Ph.D.               |                0.38|               0.38|                0.14|                0.36|
+| Working on a Degree |                0.24|               0.13|                0.19|                0.20|
 
 ### Institution Table
 
@@ -179,28 +196,28 @@ rownames(table)<-c("2-year","4-year","University","Public","Research I","Researc
 kable(table, caption = "Distribution of Adjunct Clusters by Institutional Characteristics")
 ```
 
-|                                |  Cluster 1 (n=2558)|  Cluster 2 (n=2242)|  Cluster 3 (n=3213)|  Cluster 4 (n=967)|
-|--------------------------------|-------------------:|-------------------:|-------------------:|------------------:|
-| 2-year                         |                0.05|                0.01|                0.01|               0.00|
-| 4-year                         |                0.69|                0.67|                0.67|               0.58|
-| University                     |                0.26|                0.32|                0.32|               0.42|
-| Public                         |                0.36|                0.48|                0.38|               0.33|
-| Research I                     |                0.03|                0.04|                0.05|               0.07|
-| Research II                    |                0.15|                0.19|                0.18|               0.25|
-| R3/Doctoral                    |                0.06|                0.07|                0.08|               0.09|
-| Bachelors/Masters              |                0.71|                0.67|                0.68|               0.57|
-| Associates                     |                0.05|                0.01|                0.01|               0.00|
-| Other Inst.                    |                0.00|                0.01|                0.01|               0.01|
-| Hard/Applied                   |                0.39|                0.27|                0.35|               0.31|
-| Hard/Pure                      |                0.01|                0.03|                0.05|               0.03|
-| Soft/Applied                   |                0.23|                0.13|                0.18|               0.25|
-| Soft/Pure                      |                0.30|                0.50|                0.35|               0.22|
-| Other Biglan                   |                0.07|                0.06|                0.07|               0.19|
-| Highly Selective               |                0.03|                0.09|                0.14|               0.13|
-| Faculty very respectful        |                0.65|                0.27|                0.65|               0.44|
-| Administators very considerate |                0.26|                0.04|                0.28|               0.27|
-| Research valued                |                0.66|                0.40|                0.81|               0.70|
-| Teaching valued                |                0.95|                0.74|                0.98|               0.86|
+|                                |  Cluster 1 (n=2244)|  Cluster 2 (n=950)|  Cluster 3 (n=2557)|  Cluster 4 (n=3229)|
+|--------------------------------|-------------------:|------------------:|-------------------:|-------------------:|
+| 2-year                         |                0.01|               0.00|                0.05|                0.01|
+| 4-year                         |                0.67|               0.57|                0.69|                0.67|
+| University                     |                0.32|               0.42|                0.26|                0.32|
+| Public                         |                0.48|               0.34|                0.36|                0.38|
+| Research I                     |                0.04|               0.07|                0.03|                0.05|
+| Research II                    |                0.19|               0.26|                0.15|                0.18|
+| R3/Doctoral                    |                0.07|               0.09|                0.06|                0.08|
+| Bachelors/Masters              |                0.67|               0.56|                0.71|                0.68|
+| Associates                     |                0.01|               0.00|                0.05|                0.01|
+| Other Inst.                    |                0.01|               0.01|                0.00|                0.01|
+| Hard/Applied                   |                0.27|               0.31|                0.39|                0.35|
+| Hard/Pure                      |                0.03|               0.04|                0.01|                0.05|
+| Soft/Applied                   |                0.13|               0.24|                0.23|                0.18|
+| Soft/Pure                      |                0.50|               0.22|                0.30|                0.35|
+| Other Biglan                   |                0.06|               0.19|                0.07|                0.07|
+| Highly Selective               |                0.09|               0.13|                0.03|                0.14|
+| Faculty very respectful        |                0.27|               0.45|                0.65|                0.65|
+| Administators very considerate |                0.04|               0.27|                0.26|                0.28|
+| Research valued                |                0.40|               0.70|                0.66|                0.81|
+| Teaching valued                |                0.74|               0.86|                0.95|                0.98|
 
 ### Departmental Table
 
@@ -211,23 +228,23 @@ rownames(table)<-c("Agri/Forestry","Biology","Business","Education","Engineering
 kable(table, caption = "Distribution of Adjunct Clusters by Departmental Characteristics")
 ```
 
-|                   |  Cluster 1 (n=2558)|  Cluster 2 (n=2242)|  Cluster 3 (n=3213)|  Cluster 4 (n=967)|
-|-------------------|-------------------:|-------------------:|-------------------:|------------------:|
-| Agri/Forestry     |                0.00|                0.01|                0.01|               0.01|
-| Biology           |                0.02|                0.05|                0.04|               0.04|
-| Business          |                0.17|                0.06|                0.08|               0.07|
-| Education         |                0.14|                0.06|                0.11|               0.12|
-| Engineering       |                0.02|                0.02|                0.02|               0.02|
-| English           |                0.06|                0.13|                0.07|               0.04|
-| Fine Arts         |                0.07|                0.13|                0.07|               0.04|
-| Health-related    |                0.07|                0.07|                0.12|               0.14|
-| History/PoliSci   |                0.02|                0.05|                0.03|               0.01|
-| Humanities        |                0.06|                0.11|                0.09|               0.05|
-| Math/Stats        |                0.05|                0.03|                0.06|               0.01|
-| Non-technical     |                0.15|                0.14|                0.15|               0.32|
-| Technical         |                0.04|                0.03|                0.03|               0.02|
-| Physical Sciences |                0.01|                0.03|                0.05|               0.03|
-| Social Sciences   |                0.10|                0.09|                0.09|               0.08|
+|                   |  Cluster 1 (n=2244)|  Cluster 2 (n=950)|  Cluster 3 (n=2557)|  Cluster 4 (n=3229)|
+|-------------------|-------------------:|------------------:|-------------------:|-------------------:|
+| Agri/Forestry     |                0.01|               0.01|                0.00|                0.01|
+| Biology           |                0.05|               0.04|                0.02|                0.04|
+| Business          |                0.06|               0.06|                0.17|                0.08|
+| Education         |                0.06|               0.12|                0.14|                0.11|
+| Engineering       |                0.02|               0.02|                0.02|                0.02|
+| English           |                0.13|               0.04|                0.06|                0.07|
+| Fine Arts         |                0.13|               0.03|                0.07|                0.07|
+| Health-related    |                0.07|               0.14|                0.07|                0.12|
+| History/PoliSci   |                0.05|               0.01|                0.02|                0.03|
+| Humanities        |                0.11|               0.05|                0.06|                0.08|
+| Math/Stats        |                0.03|               0.01|                0.05|                0.06|
+| Non-technical     |                0.14|               0.33|                0.15|                0.15|
+| Technical         |                0.03|               0.02|                0.04|                0.03|
+| Physical Sciences |                0.03|               0.04|                0.01|                0.05|
+| Social Sciences   |                0.09|               0.08|                0.10|                0.09|
 
 ### Employment Table
 
@@ -239,21 +256,21 @@ rownames(table)<-c("Teaching","Research","Administration","Other","Full-time","A
 kable(table, caption = "Distribution of Adjunct Clusters by Work Characteristics")
 ```
 
-|                     |  Cluster 1 (n=2558)|  Cluster 2 (n=2242)|  Cluster 3 (n=3213)|  Cluster 4 (n=967)|
-|---------------------|-------------------:|-------------------:|-------------------:|------------------:|
-| Teaching            |                0.97|                0.96|                0.96|               0.17|
-| Research            |                0.00|                0.02|                0.01|               0.13|
-| Administration      |                0.00|                0.01|                0.00|               0.54|
-| Other               |                0.02|                0.02|                0.03|               0.16|
-| Full-time           |                0.03|                0.50|                0.77|               0.90|
-| Assistant Professor |                0.06|                0.20|                0.29|               0.27|
-| Associate Professor |                0.04|                0.05|                0.09|               0.19|
-| Instructor          |                0.61|                0.36|                0.25|               0.27|
-| Lecturer            |                0.21|                0.36|                0.27|               0.14|
-| Professor           |                0.07|                0.04|                0.08|               0.14|
-| Union member        |                0.15|                0.25|                0.16|               0.09|
-| Health benefits     |                0.27|                0.87|                0.92|               0.96|
-| Retirement          |                0.31|                0.86|                0.93|               0.97|
-| Avg. Salary         |            11485.77|            35342.05|            50157.19|           73218.24|
-| Avg. Courses        |                1.86|                3.20|                3.04|               1.13|
-| Prof. Dev. Rating   |               -0.37|               -0.06|                0.23|               0.36|
+|                     |  Cluster 1 (n=2244)|  Cluster 2 (n=950)|  Cluster 3 (n=2557)|  Cluster 4 (n=3229)|
+|---------------------|-------------------:|------------------:|-------------------:|-------------------:|
+| Teaching            |                0.96|               0.15|                0.97|                0.96|
+| Research            |                0.02|               0.13|                0.00|                0.01|
+| Administration      |                0.01|               0.55|                0.00|                0.00|
+| Other               |                0.02|               0.16|                0.02|                0.03|
+| Full-time           |                0.50|               0.90|                0.03|                0.77|
+| Assistant Professor |                0.20|               0.27|                0.06|                0.29|
+| Associate Professor |                0.05|               0.18|                0.04|                0.09|
+| Instructor          |                0.36|               0.27|                0.61|                0.25|
+| Lecturer            |                0.35|               0.14|                0.21|                0.27|
+| Professor           |                0.04|               0.14|                0.07|                0.08|
+| Union member        |                0.25|               0.09|                0.15|                0.16|
+| Health benefits     |                0.87|               0.96|                0.27|                0.92|
+| Retirement          |                0.86|               0.97|                0.31|                0.93|
+| Avg. Salary         |            35363.96|           73436.25|            11485.56|            50186.92|
+| Avg. Courses        |                3.20|               1.09|                1.86|                3.04|
+| Prof. Dev. Rating   |               -0.06|               0.35|               -0.37|                0.23|

@@ -1,6 +1,4 @@
 # Salary and Income
-df$SALARYALL=pmax(df$SALARY, df$PTSALARY, na.rm = TRUE) # returns the max of the two
-
 df$AGE<-2010-df$BIRTHYR # other age varaible is cut in intervals for some reason
 
 df<- df %>% 
