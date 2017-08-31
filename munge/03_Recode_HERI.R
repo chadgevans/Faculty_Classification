@@ -76,8 +76,7 @@ df$OBEREG<-relevel(df$OBEREG,"East")
 
 df$MARITAL2<-df$MARITAL; levels(df$MARITAL2)<-c("Not","Married","Not","Not","Married","Not") # cohab=married
 df$RACEGROUP2<-df$RACEGROUP; levels(df$RACEGROUP2)<-c(rep("Minority",6),"White") # cohab=married
-df$NCHILD3<-as.factor(as.numeric(df$NCHILD1)-1+as.numeric(df$NCHILD2)-1)
-levels(df$NCHILD3)<-c("No Children","One Child",rep("Multiple Children",7)) # cohab=married
+df$NCHILD3<-as.numeric(df$NCHILD1)-1+as.numeric(df$NCHILD2)-1 # 4+ changes to four in this op
 
 # Professional Development factor
 profdf<-df %>% select(starts_with("PROFDEV")) %>% as.data.frame
@@ -152,3 +151,18 @@ df$RETIREBENEFITS<-relevel(df$RETIREBENEFITS,"No Retirement")
 
 df$PRINACT2<-df$PRINACT; levels(df$PRINACT2)[4]<-"Other"
 df$PRINACT2<-factor(df$PRINACT2,levels = c("Teaching","Research","Administration","Other"))
+
+df$GAPPANTT<- factor(rep(NA, nrow(df)), levels=c("FT NTT", "Aspiring Academic","Career-Ender","Expert","Freelancer"))  
+df$GAPPANTT[df$FULLSTAT %in% "Yes" ] <- "FT NTT"
+df$GAPPANTT[df$FULLSTAT %in% "No" & df$PTCHOICE %in% "Yes" ] <- "Aspiring Academic"
+df$GAPPANTT[df$FULLSTAT %in% "No" & df$PTCHOICE %in% "No"  & df$PTCAREER %in% "Yes"] <- "Expert"
+df$GAPPANTT[df$FULLSTAT %in% "No" & df$PTCHOICE %in% "No"  & df$PTCAREER %in% "No" & df$GENACT03 %in% "Yes"] <- "Career-Ender"
+df$GAPPANTT[df$FULLSTAT %in% "No" & df$PTCHOICE %in% "No"  & df$PTCAREER %in% "No" & df$GENACT03 %in% "No"] <- "Freelancer"
+
+df$ADJUNCT1<- factor(rep(NA, nrow(df)), levels=c("Professional Adjuncts","Itinerant Academic","Single Inst Adjunct","Full-time"))   
+df$ADJUNCT1[df$FULLSTAT %in% "Yes"] <- "Full-time"
+df$ADJUNCT1[df$PTCAREER %in% "Yes" ] <- "Professional Adjuncts"
+df$ADJUNCT1[df$PTCAREER %in% "No" & df$PTTEACH>0 ] <- "Itinerant Academic"
+df$ADJUNCT1[df$PTCAREER %in% "No" & df$PTTEACH==0 ] <- "Single Inst Adjunct"
+
+
