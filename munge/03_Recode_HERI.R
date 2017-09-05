@@ -165,4 +165,28 @@ df$ADJUNCT1[df$PTCAREER %in% "Yes" ] <- "Professional Adjuncts"
 df$ADJUNCT1[df$PTCAREER %in% "No" & df$PTTEACH>0 ] <- "Itinerant Academic"
 df$ADJUNCT1[df$PTCAREER %in% "No" & df$PTTEACH==0 ] <- "Single Inst Adjunct"
 
+df<- df %>%
+  mutate(INSTOPN10N=as.numeric(INSTOPN10)) %>%
+  group_by(ACE) %>%
+  mutate(AVGINSTOPN10N = mean(INSTOPN10N,na.rm=T)) %>%
+  as.data.frame()
+
+df<- df %>%
+  mutate(INSTOPN11N=as.numeric(INSTOPN11)) %>%
+  group_by(ACE) %>%
+  mutate(AVGINSTOPN11N = mean(INSTOPN11N,na.rm=T)) %>%
+  as.data.frame()
+
+df<- df %>%
+  mutate(INSTDESCR03N=as.numeric(INSTDESCR03)) %>%
+  group_by(ACE) %>%
+  mutate(FACRESP = mean(INSTDESCR03N,na.rm=T)) %>%
+  as.data.frame()
+
+df<- df %>%
+  mutate(INSTDESCR08N=as.numeric(INSTDESCR08)) %>%
+  group_by(ACE) %>%
+  mutate(ADMINRESP = mean(INSTDESCR08N,na.rm=T)) %>%
+  as.data.frame()
+
 

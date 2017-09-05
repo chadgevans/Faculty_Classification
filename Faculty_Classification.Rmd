@@ -34,10 +34,6 @@ Built with R version `r getRversion()`.  Last run on `r params$d`.
     + Gappa and Leslie (1993) classification
     + Furstenberg (2015) classification
 
-
-
-
-
 ## Configure
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message=FALSE, fig.width=5, fig.height=5, fig.path='graphs/', cache.path ='cache/')
