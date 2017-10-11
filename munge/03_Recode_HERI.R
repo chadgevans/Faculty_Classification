@@ -26,42 +26,6 @@ df<- df %>%
                            `Spec/Other: Special Focus Institutions--Other special-focus institutions`="Other", `-3` = NA_character_))
 df$CARNEGIE<-factor(df$CARNEGIE,levels = c("R1","R2","R3/Doctoral","Bachelors/Masters","Associates","Other"))
 
-df<- df %>% 
-  mutate(BIGLAN = recode(DEPT, `Agriculture/natural resources/related`="Hard/Applied",
-                         `Architecture and related services`="Hard/Applied",
-                         `Area/ethnic/cultural/gender studies`="Soft/Pure",
-                         `Arts (visual and performing)`="Soft/Pure",
-                         `Biological and biomedical sciences`="Hard/Applied",
-                         `Business/management/marketing/related`="Hard/Applied",
-                         `Communication/journalism/ comm. tech`="Soft/Applied",
-                         `Computer/info sciences/support tech`="Hard/Applied",
-                         `Construction trades`="Hard/Applied",
-                         `Education`="Soft/Applied",
-                         `Engineering technologies/technicians`="Hard/Applied",
-                         `English language and literature/letters`="Soft/Pure",
-                         `Family/consumer sciences, human sciences`="Soft/Applied",
-                         `Foreign languages/literature/linguistics`="Soft/Pure",
-                         `Health professions/clinical sciences`="Hard/Applied",
-                         `Legal professions and studies`="Soft/Applied",
-                         `Library science`="Soft/Applied",
-                         `Mathematics and statistics`="Hard/Applied",
-                         `Mechanical/repair technologies/techs`="Hard/Applied",
-                         `Multi/interdisciplinary studies`="Soft/Pure",
-                         `Other`="Other",
-                         `Parks/recreation/leisure/fitness studies`="Soft/Applied",
-                         `Personal and culinary services`="Soft/Applied",
-                         `Philosophy, religion & theology`="Soft/Pure",
-                         `Physical sciences`="Hard/Pure",
-                         `Psychology`="Soft/Pure",
-                         `Public administration/social services`="Soft/Applied",
-                         `Science technologies/technicians`="Hard/Applied",
-                         `Security & protective services`="Soft/Applied",
-                         `Social sciences (except psych) and history`="Soft/Pure",
-                         `Transportation & materials moving`="Other"))
-df$BIGLAN<-factor(df$BIGLAN, levels = c("Hard/Applied","Hard/Pure","Soft/Applied","Soft/Pure","Other"))
-df$BIGLAN2<-df$DEPT; levels(df$BIGLAN2)<-c("Hard.Applied.Life","Soft.Applied.NonLife","Soft.Pure.Life","Soft.Pure.NonLife","Hard.Applied.Life","Soft.Applied.NonLife","Soft.Applied.NonLife","Hard.Applied.NonLife","Hard.Applied.NonLife","Soft.Applied.Life","Hard.Applied.NonLife","Soft.Pure.NonLife","Soft.Applied.Life","Soft.Pure.NonLife","Hard.Applied.Life","Soft.Applied.NonLife","Soft.Applied.NonLife","Hard.Pure.NonLife","Hard.Applied.NonLife","Soft.Pure.Life","Soft.Applied.Life","Hard.Applied.NonLife","Soft.Pure.NonLife","Soft.Pure.NonLife","Hard.Pure.NonLife","Soft.Pure.Life","Soft.Applied.NonLife","Hard.Applied.NonLife","Soft.Applied.NonLife","Soft.Pure.Life","Soft.Applied.NonLife","Other")
-df$BIGLAN3<-df$BIGLAN2; levels(df$BIGLAN3)<-c("Hard.Applied","Soft.Applied","Soft.Pure.Life","Soft.Pure.NonLife","Hard.Applied","Soft.Applied","Hard.Pure","Other")
-
 df<- df %>%
   mutate(OBEREG=recode(OBEREG, `Far West - AK CA HI NV OR WA`="West",
                        `Great Lakes - IL IN MI OH WI`="Midwest",
@@ -164,29 +128,5 @@ df$ADJUNCT1[df$FULLSTAT %in% "Yes"] <- "Full-time"
 df$ADJUNCT1[df$PTCAREER %in% "Yes" ] <- "Professional Adjuncts"
 df$ADJUNCT1[df$PTCAREER %in% "No" & df$PTTEACH>0 ] <- "Itinerant Academic"
 df$ADJUNCT1[df$PTCAREER %in% "No" & df$PTTEACH==0 ] <- "Single Inst Adjunct"
-
-df<- df %>%
-  mutate(INSTOPN10N=as.numeric(INSTOPN10)) %>%
-  group_by(ACE) %>%
-  mutate(AVGINSTOPN10N = mean(INSTOPN10N,na.rm=T)) %>%
-  as.data.frame()
-
-df<- df %>%
-  mutate(INSTOPN11N=as.numeric(INSTOPN11)) %>%
-  group_by(ACE) %>%
-  mutate(AVGINSTOPN11N = mean(INSTOPN11N,na.rm=T)) %>%
-  as.data.frame()
-
-df<- df %>%
-  mutate(INSTDESCR03N=as.numeric(INSTDESCR03)) %>%
-  group_by(ACE) %>%
-  mutate(FACRESP = mean(INSTDESCR03N,na.rm=T)) %>%
-  as.data.frame()
-
-df<- df %>%
-  mutate(INSTDESCR08N=as.numeric(INSTDESCR08)) %>%
-  group_by(ACE) %>%
-  mutate(ADMINRESP = mean(INSTDESCR08N,na.rm=T)) %>%
-  as.data.frame()
 
 

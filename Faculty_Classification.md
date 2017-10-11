@@ -2,7 +2,7 @@ Faculty Classification
 ================
 Chad Evans
 
-Built with R version 3.3.2. Last run on 2017-09-05.
+Built with R version 3.3.2. Last run on 2017-10-09.
 
 Contents
 --------
@@ -13,17 +13,26 @@ Contents
 -   [Munge](#munge)
     -   Subset
     -   Missing Data
-    -   Variables
     -   Imputation
-    -   Data
--   [Cluster Analysis](#cluster-analysis)
+-   [Cluster Analysis of Full-time Faculty](#cluster-analysis-of-full-time-faculty)
     -   Determining the Number of Clusters
     -   K-means Clustering
--   Tabulations
-    -   [Demography Table](#demography-table)
-    -   [Institution Table](#institution-table)
-    -   [Department Table](#departmental-table)
-    -   [Employment Table](#employment-table)
+    -   [Full-time Faculty Crosstabulations](#full-time-faculty-crosstabulations)
+        -   Demography Table
+        -   Institution Table
+        -   Department Table
+        -   Employment Table
+    -   [Full-time Faculty Typology](#full-time-faculty-typology)
+-   [Cluster Analysis of Part-time Faculty](#cluster-analysis-of-part-time-faculty)
+    -   Determining the Number of Clusters
+    -   K-means Clustering
+    -   [Part-time Faculty Crosstabulations](#part-time-faculty-crosstabulations)
+        -   Demography Table
+        -   Institution Table
+        -   Department Table
+        -   General Employment Table
+        -   Part-time Employment Table
+    -   [Part-time Faculty Typology](#part-time-faculty-typology)
 -   [Conclusion](#conclusion)
 -   [Appendix](#appendix)
     -   Gappa and Leslie (1993) classification
@@ -39,130 +48,105 @@ Munge
 load(file.path(Private_Cache,"HERI_Class.RData"))
 source(file.path(Munge, "01_Merge_the_data.R"))
 source(file.path(Munge, "02_Clean_the_data.R"))
+source(file.path(Munge, "03_Recode_4_Impute.R")) # necessary to avoid subscript out of bounds
 source(file.path(Munge, "HERI_vars.R"))
 ```
 
+### Create Full-time and Part-time Datasets
+
+First we create the dataframes that will be used for k-means clustering. There will be one dataframe for the Full-time faculty and one for the part-time faculty. For each of these data frames, we will remove administrative variables that contribute no meaningful classification data. We'll also remove the composite variables which simply summarize information on variables already contained in our dataset (although we keep STRESS because the data HERI gave us do not contain all the stress items in the full dataset). We also remove the variable indicating full-time status, as the two datasets correspond to that dimension. Finally, we remove all variables with high missingness (more than 25%). Missingness removed only a few variables from each of the datasets.
+
 ``` r
-raw_n<-nrow(df)
-df<-df %>% filter(!(TENURE=="Tenured")) # reduces from 8980 to 8450
-filtered_n<-nrow(df)
+FTdf<-df %>% filter(FULLSTAT=="Yes") %>% select(-one_of(c(ADMINVARS, PTVARS,"PRODUCTIVITY","SATIS_WORKPLACE","SATIS_COMPENSATION","FULLSTAT","DEPT","DEPTDISC"))) # Get rid of admin vars, part-time only variables, and composite variables (b/c we have the items)  We are keeping STRESS because was lack signficant number of the STRESS items.  Also, DEPT and DEPTDISC have tons of levels and their are collapsed versions (e.g., DEPTA) already in the data.  Finally, all FT faculty are not on tenure track, but institution has tenure system.  So we must remove that variable as there is no variation.
+miss_pct<-FTdf %>% map_dbl(function(x) { round((sum(is.na(x)) / length(x)) * 100, 1) })
+HIGHMISS<-labels(which(miss_pct>25))
+FTdf<-FTdf %>% select(-one_of(HIGHMISS)) # Get rid of additional features with large amounts of missing observations.
+dim(FTdf)
 ```
 
-The original 2010 HERI data had 8980 observations. After removing part-time faculty with Tenure (an anomoly outside the scope of this research), we have a total of 8450 faculty.
+    ## [1] 4527  108
+
+``` r
+PTdf<-df %>% filter(FULLSTAT=="No") %>% select(-one_of(c(ADMINVARS,"PRODUCTIVITY","SATIS_WORKPLACE","SATIS_COMPENSATION","FULLSTAT","DEPT","DEPTDISC"))) # %>% names() # Get rid of admin vars, and composite variables (b/c we have the items)  We are keeping STRESS because was lack signficant number of the STRESS items.
+miss_pct<-PTdf %>% map_dbl(function(x) { round((sum(is.na(x)) / length(x)) * 100, 1) })
+HIGHMISS<-labels(which(miss_pct>25))
+PTdf<-PTdf %>% select(-one_of(HIGHMISS)) # Get rid of additional features with large amounts of missing observations.
+dim(PTdf)
+```
+
+    ## [1] 4453  134
 
 ### Missing Data
 
 ``` r
-miss_pct<-df %>%
-  map_dbl(function(x) { round((sum(is.na(x)) / length(x)) * 100, 1) })
-data.frame(miss=miss_pct, var=names(miss_pct), row.names=NULL) %>%
-ggplot(aes(x=reorder(var, -miss), y=miss)) +
-geom_bar(stat='identity', fill='red') +
-labs(x='', y='% missing', title='Percent missing data by feature') +
-theme(axis.text.x=element_text(angle=90, hjust=1))
+miss_pct_plot(FTdf)
 ```
 
-![](graphs/unnamed-chunk-1-1.png)
-
-The missingness in these data is less concerning than it appears. There are 31 variables missing more than 50 percent of their observations; however, this is because they are mostly only questions that pertain to part-time faculty. Full-time faculty did not respond to this battery of questions and so these questions will not play any role in the analysis. There are an additional 10 variables with 5-10 percent missingness. This is not ideal, but the level of missingness is pretty small. The vast majority of our variables (112 of them) have less than 5 percent missingness. These will be very useful in helping identify clusters of faculty with these characteristics. Despite this small amount of missingness, I still anticipate imputing data. With so many features, surely listwise deletion would lead to an unacceptable deletion of most of our data.
+![](graphs/unnamed-chunk-2-1.png)
 
 ``` r
-df<-df %>% select(one_of(c(ADMINVARS,WORKVARS,SALARYVARS,INSTVARS,BACKVARS,ATTITUDEVARS,OTHERVARS,PROFDEVVARS, FACTORVARS, PRODUCTIVITYVARS,STRESSVARS,SATISVARS,PTVARS)))
-HIGHMISS<-labels(which(miss_pct>50))
-OMIT<-c(ADMINVARS,PTVARS,HIGHMISS) 
-
-df$SALARYALL=pmax(df$SALARY, df$PTSALARY, na.rm = TRUE) # important to include the combined salary variable so that salary insn't exclude from the clustering.
+miss_pct_plot(PTdf)
 ```
 
-We will conduct k-means clustering using as many meaningful faculty features as possible. We remove the administrative variables like subject IDs and institution IDs that contribute no meaningful information. We also remove all variables corresponding only to part-time faculty and the handful of other characterstics with missingness greater than 50 percent. Our final data frame for k-means clustering consists of 8450 observations and 113 faculty features.
+![](graphs/unnamed-chunk-2-2.png)
+
+### Imputation of Missing Values
+
+As expected, listwise deletion across all features is impossible. We thus must consider a method to deal with the missingness. I opt for single imputiation. In some cases, like regression, it would probably be worth multiply imputing to get standard errors correct. However, this study is not using standard errors and is merely a procedure to find coherence in the data. I thus opt to singly impute the data for reasons of simplicity.
+
+The mice() package allows for many different algorithms to impute data. I opted for using regression trees (CART). This was my choice because my data contain a large number of unbalanced factor variables. The stochasitc method of predictive mean matching (pmm) failed with a computationally singular error. The algorithm imputes each target column by using information from all of the other columns in the data. As most other columns have missingness as well, the algorthm uses the most recent round of imputations for each.
+
+I set the maximum iterations to 5. This will give the chained equations multiple attempts to converge on a good imputed value for each cell.
 
 ``` r
 #Imputing takes 2-3 hours
-tempData<-df %>% select(-one_of(OMIT)) %>% mice(m=1,maxit=50,seed=500) # originally used meth='pmm'
-#save(tempData, file=file.path(Private_Cache,"tempData.RData"))
-IData <- complete(tempData,1)
-save(IData, file=file.path(Private_Cache,"IData.RData"))
+FTdfi<-FTdf %>% mice(m=1,maxit=5,seed=500, method='cart') %>% complete(1)
+save(FTdfi, file=file.path(Private_Cache,"FTdfi.RData"))
+
+PTdfi<-PTdf %>% mice(m=1,maxit=5,seed=500, method='cart') %>% complete(1)
+save(PTdfi, file=file.path(Private_Cache,"PTdfi.RData"))
 ```
 
-As expected, listwise deletion across 117 features is impossible. In fact, there is not a single observation with complete data. We thus must consider a method to deal with the missingness. I opt for single imputiation. In some cases, like regression, it would probably be worth multiply imputing to get standard errors correct. However, this study is not using standard errors and is merely an experimental procedure to find coherence in the data. I thus opt to singly impute the data for reasons of simplicity.
+Cluster Analysis of Full-time Faculty
+-------------------------------------
 
-I set the maximum iterations to 50, rather than the default of 5. This will give the chained equations more attempts to converge on a good imputed value for each cell. Predictive mean matching was used for numeric variables. Logistic regression was used to impute binary data. Polytomous regression imputation was used for unordered categorical variables.
-
-Data
-----
+To implement k-means clustering, all data must be numeric. This requires converting binary factors to zero and ones. Multinomial variables needed to be converted into a matrix of dummy variables.
 
 ``` r
-load(file.path(Private_Cache,"IDataOLD.RData")) # Singly imputed data
-data<-IData
+load(file.path(Private_Cache,"FTdfi.RData")) # Singly imputed data
+idata<-data.frame(model.matrix(~ ., data=FTdfi, contrasts.arg = lapply(FTdfi[,sapply(FTdfi, is.factor)], contrasts, contrasts=FALSE)))
 ```
 
-Cluster Analysis
-----------------
+### Determining the number of Clusters
+
+When implementing k-means clustering, one must specify the number of means to cluster around in the data. The most common approach to choosing the number of clusters is to plot how the within sum of squared residuals decreases as additional means are added and identify the "elbow." This is the point where the explained variation starts to begin to plateau off.
 
 ``` r
-data<-data.frame(model.matrix(~ ., data=data , contrasts.arg = lapply(data[,sapply(data, is.factor)], contrasts, contrasts=FALSE)))
+wssplot(idata, nc=7)
 ```
 
-To implement k-means clustering, all data must be numeric. This required converting binary factors to zero and ones. Multinomial variables needed to be converted into a matrix of dummy variables. Some claim that it is ineffective to convert categorical predictors into binaries in this fashion. But it is necessary if you want multinomial features to factor into the analysis. As this chapter is descriptive and exploratory, I implemented this traditional practice of creating a matrix of numeric variables.
+![](graphs/unnamed-chunk-4-1.png)
 
-### Determining the number of Clusters.
-
-When implementing k-means clustering, one must specify the number of means to cluster around in the data. The most common approach to choosing the number of clusters is to plot how the within sum of squared residuals decreases as additional means are added and identify the "elbow." This is the point where explained variation begins its platau.
-
-``` r
-wssplot <- function(data, nc=15, seed=1234){
-  wss <- (nrow(data)-1)*sum(apply(data,2,var))
-  for (i in 2:nc){
-    set.seed(seed)
-    wss[i] <- sum(kmeans(data, centers=i)$withinss)
-  }
-  plot(1:nc, wss, type="b", xlab="Number of Clusters", ylab="Within groups sum of squares", main="Determining the Number of Clusters")
-}
-wssplot(data, nc=7) # put in # of clusters here
-```
-
-![](graphs/Determining_Number_Clusters-1.png)
-
-The elbow suggests that four clusters sufficiently explain most of the variation. I therefore opt to go witih four means in the k-means clustering analysis.
+The elbow suggests that three clusters may be sufficient for explaining most of the variation in the full-time data. I therefore opt to go with three means in the k-means clustering analysis of full-time faculty.
 
 ### K-Means Clustering
 
 ``` r
-d<-data[,-1] # git rid of the intercept (no variation, convergence issues)
-d<-scale(d)
-kmeans.obj<- d %>% kmeans(4, nstart = 10, algorithm = c("Hartigan-Wong"))
-df$cluster<-kmeans.obj$cluster
+n_clusters<-3
+d<-idata %>% select(-X.Intercept.) %>% scale() %>% data.frame() # git rid of the intercept (no variation, convergence issues)
+singular_d<-(colnames(d)[apply(d, 2, anyNA)])
+d<-d %>% select(-one_of(singular_d))
+kmeans.obj<- kmeans(d, n_clusters, nstart = 10, algorithm = c("Hartigan-Wong"))
+FTdf$cluster<-kmeans.obj$cluster
 ```
 
 Before conducting k-means clustering, all variables were normalized so that features with the greatest ranges did not have undue influence on the formation of clusters.
 
 To conduct the k-means analysis, it is important to choose random starting points for the means. This helps prevent the algorithm (Hartingan-Wong 1979) from converging on suboptimal means. I used 10 different sets of starting points to identify the means that best summarize the information in the data.
 
-Tabulations
------------
+### Full-time Faculty Crosstabulations
 
-``` r
-source(file.path(Munge, "03_Recode_HERI.R"))
-```
-
-``` r
-clusters<-table(df$cluster)
-print(clusters)
-```
-
-    ## 
-    ##    1    2    3    4 
-    ## 2244  950 2557 3229
-
-``` r
-C1<-paste("Cluster 1 (n=",clusters[1],")",sep = "")
-C2<-paste("Cluster 2 (n=",clusters[2],")",sep = "")
-C3<-paste("Cluster 3 (n=",clusters[3],")",sep = "")
-C4<-paste("Cluster 4 (n=",clusters[4],")",sep = "")
-Clusternames<-c(C1,C2,C3,C4)
-```
-
-### Demography Table
+#### Demography Table
 
 ``` r
 DemVars<-c("AGE","SEX","MARITAL2","RACEGROUP2","GENACT02","NATENGSP","NCHILD3","DEGEARN2","DEGWORK2")
@@ -172,124 +156,306 @@ rownames(table)<-c("Age","Male","Married","White","Citizen","Native English","Av
 kable(table, caption = "Distribution of Adjunct Clusters by Demographic Characteristics")
 ```
 
-|                     |  Cluster 1 (n=2244)|  Cluster 2 (n=950)|  Cluster 3 (n=2557)|  Cluster 4 (n=3229)|
-|---------------------|-------------------:|------------------:|-------------------:|-------------------:|
-| Age                 |               47.37|              50.19|               52.14|               49.78|
-| Male                |                0.41|               0.45|                0.51|                0.44|
-| Married             |                0.75|               0.79|                0.80|                0.77|
-| White               |                0.80|               0.84|                0.84|                0.85|
-| Citizen             |                0.93|               0.94|                0.97|                0.95|
-| Native English      |                0.88|               0.90|                0.93|                0.90|
-| Avg. Children       |                1.34|               1.62|                1.84|                1.61|
-| BA or Less          |                0.05|               0.06|                0.12|                0.06|
-| Prof Degree         |                0.57|               0.56|                0.75|                0.58|
-| Ph.D.               |                0.38|               0.38|                0.14|                0.36|
-| Working on a Degree |                0.24|               0.13|                0.19|                0.20|
+|                     |  Cluster 1 (n=656)|  Cluster 2 (n=1626)|  Cluster 3 (n=2245)|
+|---------------------|------------------:|-------------------:|-------------------:|
+| Age                 |              49.65|               45.99|               50.16|
+| Male                |               0.49|                0.43|                0.43|
+| Married             |               0.80|                0.75|                0.78|
+| White               |               0.83|                0.81|                0.86|
+| Citizen             |               0.93|                0.92|                0.95|
+| Native English      |               0.88|                0.87|                0.91|
+| Avg. Children       |               1.56|                1.27|                1.65|
+| BA or Less          |               0.07|                0.04|                0.06|
+| Prof Degree         |               0.54|                0.50|                0.64|
+| Ph.D.               |               0.39|                0.46|                0.30|
+| Working on a Degree |               0.13|                0.20|                0.19|
 
-Generally, the different clusters of adjuncts do not differ substantialy with regard to demography. However, cluster 1 may tend to have fewer children, often no children. Cluster 3 tends to have a greater concentration of professional degrees, rather than ph.d.'s. Cluster 2 may be a bit more established in their education, as fewer of them are currently working on an additional degree.
+-   Most demographic characterstics don't differ much across clusters.
+-   Cluster 3 tends to have a professional background (and somewhat fewer PhDs).
+-   Cluster 1 are less likely to be working on a degree
 
-### Institution Table
+#### Institution Table
 
 ``` r
-INSTVARS<-c("INSTTYPE","INSTCONT","CARNEGIE","BIGLAN","SELECTIVITY2","INSTDESCR03","INSTDESCR08","INSTOPN10","INSTOPN11")
+INSTVARS<-c("INSTTYPE","INSTCONT","CARNEGIE","SELECTIVITY2","INSTDESCR03","INSTDESCR08","INSTOPN10","INSTOPN11")
 table<-round(nfCrossTable(data=df[INSTVARS],CTvar=df$cluster),2)
 colnames(table)<-Clusternames
-rownames(table)<-c("2-year","4-year","University","Public","Research I","Research II","R3/Doctoral","Bachelors/Masters","Associates","Other Inst.","Hard/Applied","Hard/Pure","Soft/Applied","Soft/Pure","Other Biglan","Highly Selective","Faculty very respectful","Administators very considerate","Research valued","Teaching valued")
+rownames(table)<-c("2-year","4-year","University","Public","Research I","Research II","R3/Doctoral","Bachelors/Masters","Associates","Other Inst.","Highly Selective","Faculty very respectful","Administators very considerate","Research valued","Teaching valued")
 kable(table, caption = "Distribution of Adjunct Clusters by Institutional Characteristics")
 ```
 
-|                                |  Cluster 1 (n=2244)|  Cluster 2 (n=950)|  Cluster 3 (n=2557)|  Cluster 4 (n=3229)|
-|--------------------------------|-------------------:|------------------:|-------------------:|-------------------:|
-| 2-year                         |                0.01|               0.00|                0.05|                0.01|
-| 4-year                         |                0.67|               0.57|                0.69|                0.67|
-| University                     |                0.32|               0.42|                0.26|                0.32|
-| Public                         |                0.48|               0.34|                0.36|                0.38|
-| Research I                     |                0.04|               0.07|                0.03|                0.05|
-| Research II                    |                0.19|               0.26|                0.15|                0.18|
-| R3/Doctoral                    |                0.07|               0.09|                0.06|                0.08|
-| Bachelors/Masters              |                0.67|               0.56|                0.71|                0.68|
-| Associates                     |                0.01|               0.00|                0.05|                0.01|
-| Other Inst.                    |                0.01|               0.01|                0.00|                0.01|
-| Hard/Applied                   |                0.27|               0.31|                0.39|                0.35|
-| Hard/Pure                      |                0.03|               0.04|                0.01|                0.05|
-| Soft/Applied                   |                0.13|               0.24|                0.23|                0.18|
-| Soft/Pure                      |                0.50|               0.22|                0.30|                0.35|
-| Other Biglan                   |                0.06|               0.19|                0.07|                0.07|
-| Highly Selective               |                0.09|               0.13|                0.03|                0.14|
-| Faculty very respectful        |                0.27|               0.45|                0.65|                0.65|
-| Administators very considerate |                0.04|               0.27|                0.26|                0.28|
-| Research valued                |                0.40|               0.70|                0.66|                0.81|
-| Teaching valued                |                0.74|               0.86|                0.95|                0.98|
+|                                |  Cluster 1 (n=656)|  Cluster 2 (n=1626)|  Cluster 3 (n=2245)|
+|--------------------------------|------------------:|-------------------:|-------------------:|
+| 2-year                         |               0.00|                0.00|                0.00|
+| 4-year                         |               0.57|                0.58|                0.70|
+| University                     |               0.43|                0.42|                0.30|
+| Public                         |               0.33|                0.43|                0.36|
+| Research I                     |               0.07|                0.04|                0.04|
+| Research II                    |               0.26|                0.26|                0.16|
+| R3/Doctoral                    |               0.09|                0.10|                0.08|
+| Bachelors/Masters              |               0.56|                0.58|                0.70|
+| Associates                     |               0.00|                0.00|                0.00|
+| Other Inst.                    |               0.02|                0.02|                0.01|
+| Highly Selective               |               0.10|                0.09|                0.11|
+| Faculty very respectful        |               0.46|                0.31|                0.67|
+| Administators very considerate |               0.30|                0.06|                0.31|
+| Research valued                |               0.73|                0.48|                0.81|
+| Teaching valued                |               0.85|                0.79|                0.98|
 
-Cluster 2 tends to be found more often in research instiution. Other adjunct types more commonly work in liberal arts institutions issuing BAs and other lower-tier degrees.
-Cluster 1 has a tendency to work in the soft science, pure fields (e.g. social sicences, languages, interdisciplinary studies, and philosophy). Cluster 2 is disproportionately found in "other" institutions, although it is unclear from HERI what might be included in that "other" category. Cluster 3 tend to work in non-selective institutions (moreso than other cluster categories). Cluster 1 tends to view other faculty members as less respectful (only a quarter of their collegues are viewed as very respectful). They also view administrators more harshly than the other clusters. Not surprisingly, they are less likely to say that their teaching and research are valued.
+-   Cluster 3 have a much more optimistic outlook on their work. They are more likely to report that faculty and administrators are respectful, and that research and teaching is valued.
+-   Cluster 2 are much more cynical. They report that faculty are not very respectful and administrators are nearly all not respectful. They also tend to report that research is not valued where they work. Also, teaching isn't particularly valued to them either.
 
-### Departmental Table
+#### Department Table
+
+HERI has departamental level infromation, but it is challenging to see any patterns. So I collapsed the disciplines into the Biglan classification.
 
 ``` r
-table<-round(prop.table(table(df$DEPTA, df$cluster),2),2) # DEPTA was aggregated by HERI
+# DEPTA available, but tough to see any patterns with so many categories
+source(file.path(Libraries, "Subclass.R"))
+table<-round(prop.table(table(df$SUBCLASS, df$cluster),2),2)
 colnames(table)<-Clusternames
-rownames(table)<-c("Agri/Forestry","Biology","Business","Education","Engineering","English","Fine Arts","Health-related","History/PoliSci","Humanities","Math/Stats","Non-technical","Technical","Physical Sciences","Social Sciences")
+#rownames(table)<-c("Agri/Forestry","Biology","Business","Education","Engineering","English","Fine Arts","Health-related","History/PoliSci","Humanities","Math/Stats","Non-technical","Technical","Physical Sciences","Social Sciences")
 kable(table, caption = "Distribution of Adjunct Clusters by Departmental Characteristics")
 ```
 
-|                   |  Cluster 1 (n=2244)|  Cluster 2 (n=950)|  Cluster 3 (n=2557)|  Cluster 4 (n=3229)|
-|-------------------|-------------------:|------------------:|-------------------:|-------------------:|
-| Agri/Forestry     |                0.01|               0.01|                0.00|                0.01|
-| Biology           |                0.05|               0.04|                0.02|                0.04|
-| Business          |                0.06|               0.06|                0.17|                0.08|
-| Education         |                0.06|               0.12|                0.14|                0.11|
-| Engineering       |                0.02|               0.02|                0.02|                0.02|
-| English           |                0.13|               0.04|                0.06|                0.07|
-| Fine Arts         |                0.13|               0.03|                0.07|                0.07|
-| Health-related    |                0.07|               0.14|                0.07|                0.12|
-| History/PoliSci   |                0.05|               0.01|                0.02|                0.03|
-| Humanities        |                0.11|               0.05|                0.06|                0.08|
-| Math/Stats        |                0.03|               0.01|                0.05|                0.06|
-| Non-technical     |                0.14|               0.33|                0.15|                0.15|
-| Technical         |                0.03|               0.02|                0.04|                0.03|
-| Physical Sciences |                0.03|               0.04|                0.01|                0.05|
-| Social Sciences   |                0.09|               0.08|                0.10|                0.09|
+|                 |  Cluster 1 (n=656)|  Cluster 2 (n=1626)|  Cluster 3 (n=2245)|
+|-----------------|------------------:|-------------------:|-------------------:|
+| Sciences        |               0.16|                0.19|                0.20|
+| Soft/Applied    |               0.55|                0.28|                0.38|
+| Humanities/Arts |               0.09|                0.30|                0.20|
+| Health Sciences |               0.12|                0.10|                0.13|
+| Social Sciences |               0.08|                0.13|                0.09|
 
-Now let's look at departments in particular. Cluster 3 have a greater tendency to work in business schools. Cluster 1, again, are more likely to work in English, Fine Arts, and the humanities, although their percentage in the social sciences looks comparative to the other clusters. They are also less likely to work in Education departments. Cluster 2 have a greater tendency of working in non-technical fields and also health-related fields (along with cluster 4).
+-   Cluster 1 tends to be in Sciences or Soft/applied fields
+-   Cluster 2 tends to have the most Humanities/Arts faculty.
 
-### Employment Table
+#### Employment Table
 
 ``` r
-WORKVARS<-c("PRINACT2","FULLSTAT","ACADRANK","GENACT01","HEALTHBENEFITS", "RETIREBENEFITS","SALARYALL","COURSENUM","PROFDEVFAC")
+WORKVARS<-c("PRINACT2","ACADRANK","GENACT01","HEALTHBENEFITS", "RETIREBENEFITS","SALARY","COURSENUM","PROFDEVFAC")
 table<-round(nfCrossTable(data=df[WORKVARS],CTvar=df$cluster),2)
 colnames(table)<-Clusternames
-rownames(table)<-c("Teaching","Research","Administration","Other","Full-time","Assistant Professor","Associate Professor","Instructor","Lecturer","Professor","Union member","Health benefits","Retirement","Avg. Salary","Avg. Courses","Prof. Dev. Rating")
+rownames(table)<-c("Teaching","Research","Administration","Other","Assistant Professor","Associate Professor","Instructor","Lecturer","Professor","Union member","Health benefits","Retirement","Avg. Salary","Avg. Courses","Prof. Dev. Rating")
 kable(table, caption = "Distribution of Adjunct Clusters by Work Characteristics")
 ```
 
-|                     |  Cluster 1 (n=2244)|  Cluster 2 (n=950)|  Cluster 3 (n=2557)|  Cluster 4 (n=3229)|
-|---------------------|-------------------:|------------------:|-------------------:|-------------------:|
-| Teaching            |                0.96|               0.15|                0.97|                0.96|
-| Research            |                0.02|               0.13|                0.00|                0.01|
-| Administration      |                0.01|               0.55|                0.00|                0.00|
-| Other               |                0.02|               0.16|                0.02|                0.03|
-| Full-time           |                0.50|               0.90|                0.03|                0.77|
-| Assistant Professor |                0.20|               0.27|                0.06|                0.29|
-| Associate Professor |                0.05|               0.18|                0.04|                0.09|
-| Instructor          |                0.36|               0.27|                0.61|                0.25|
-| Lecturer            |                0.35|               0.14|                0.21|                0.27|
-| Professor           |                0.04|               0.14|                0.07|                0.08|
-| Union member        |                0.25|               0.09|                0.15|                0.16|
-| Health benefits     |                0.87|               0.96|                0.27|                0.92|
-| Retirement          |                0.86|               0.97|                0.31|                0.93|
-| Avg. Salary         |            35363.96|           73436.25|            11485.56|            50186.92|
-| Avg. Courses        |                3.20|               1.09|                1.86|                3.04|
-| Prof. Dev. Rating   |               -0.06|               0.35|               -0.37|                0.23|
+|                     |  Cluster 1 (n=656)|  Cluster 2 (n=1626)|  Cluster 3 (n=2245)|
+|---------------------|------------------:|-------------------:|-------------------:|
+| Teaching            |               0.06|                0.92|                0.93|
+| Research            |               0.16|                0.02|                0.01|
+| Administration      |               0.61|                0.02|                0.03|
+| Other               |               0.17|                0.04|                0.03|
+| Assistant Professor |               0.25|                0.35|                0.31|
+| Associate Professor |               0.19|                0.09|                0.10|
+| Instructor          |               0.28|                0.25|                0.28|
+| Lecturer            |               0.13|                0.28|                0.26|
+| Professor           |               0.15|                0.03|                0.05|
+| Union member        |               0.06|                0.16|                0.13|
+| Health benefits     |               0.96|                0.96|                0.94|
+| Retirement          |               0.97|                0.94|                0.94|
+| Avg. Salary         |           77805.87|            55033.36|            56998.66|
+| Avg. Courses        |               0.78|                3.27|                3.05|
+| Prof. Dev. Rating   |               0.08|               -0.06|                0.02|
 
-Cluster 2, it is clear, tend to be administrators. The other clusters tend to be teachers. Most of cluster 2 works full-time. In contrast, almost all cluster 3 adjuncts work part-time. Cluster 3 adjuncts also only rarely hold a distinguished academic rank. Instead they tend to be classified as lecturers and instructors. Cluster 1 are more likely to be unionized and they also tend to more often have health and retirement benefits. The cluster 2 administrative adjuncts and cluster 4 adjuncts regularly have such benefits, but they are rarely union positions.
+-   Most salient differences found in employment
+-   Cluster 1 do not teach. They are mostly administrators and some research faculty
+-   The other clusters are teachers (so there are two types of full-time teachers)
 
-Cluster 3, the group with so many part-time faculty, tend to earn the lowest salaries. They also get the least amount of professional development. Cluster 1, which appear to be something of an aspiring adjunct, earn modest salaries and tend to teach the most courses. Clusters 2 and 4 tend to earn the highest salaries and they also tend to get professional development. But whereas cluster 2 tend to be administrators, cluster 4 are teachers averaging 3 classes a term.
+### Full-time Faculty Typology
+
+-   Cluster 1: Administrative/research adjuncts
+-   Cluster 2: Disgruntled adjunct
+-   Cluster 3: Professional Schools professor
+
+The "administrative adjunct" is the clearest pattern to emerge from the full-time faculty analysis.
+
+Cluster Analysis of Part-time Faculty
+-------------------------------------
+
+``` r
+load(file.path(Private_Cache,"PTdfi.RData")) # Singly imputed data
+idata<-data.frame(model.matrix(~ ., data=PTdfi, contrasts.arg = lapply(PTdfi[,sapply(PTdfi, is.factor)], contrasts, contrasts=FALSE)))
+```
+
+### Determining the number of Clusters
+
+``` r
+wssplot(idata, nc=7) 
+```
+
+![](graphs/unnamed-chunk-5-1.png)
+
+The elbow suggests that five clusters sufficiently explain most of the variation in the part-time data. I therefore opt to go with five means in the k-means clustering analysis for part-time faculty.
+
+### K-Means Clustering
+
+``` r
+n_clusters<-5
+d<-idata %>% select(-X.Intercept.) %>% scale() %>% data.frame() # git rid of the intercept (no variation, convergence issues)
+singular_d<-(colnames(d)[apply(d, 2, anyNA)])
+d<-d %>% select(-one_of(singular_d))
+kmeans.obj<- kmeans(d, n_clusters, nstart = 10, algorithm = c("Hartigan-Wong"))
+PTdf$cluster<-kmeans.obj$cluster
+```
+
+### Part-time Faculty Crosstabulations
+
+#### Demography Table
+
+``` r
+DemVars<-c("AGE","SEX","MARITAL2","RACEGROUP2","GENACT02","NATENGSP","NCHILD3","DEGEARN2","DEGWORK2")
+table<-round(nfCrossTable(data=df[DemVars],CTvar=df$cluster),2)
+colnames(table)<-Clusternames
+rownames(table)<-c("Age","Male","Married","White","Citizen","Native English","Avg. Children","BA or Less","Prof Degree","Ph.D.","Working on a Degree")
+kable(table, caption = "Distribution of Adjunct Clusters by Demographic Characteristics")
+```
+
+|                     |  Cluster 1 (n=351)|  Cluster 2 (n=1240)|  Cluster 3 (n=756)|  Cluster 4 (n=1213)|  Cluster 5 (n=893)|
+|---------------------|------------------:|-------------------:|------------------:|-------------------:|------------------:|
+| Age                 |              61.45|               47.00|              48.16|               52.63|              53.68|
+| Male                |               0.56|                0.39|               0.38|                0.59|               0.47|
+| Married             |               0.82|                0.74|               0.74|                0.83|               0.81|
+| White               |               0.90|                0.79|               0.80|                0.86|               0.85|
+| Citizen             |               0.97|                0.93|               0.95|                0.98|               0.98|
+| Native English      |               0.93|                0.87|               0.90|                0.95|               0.93|
+| Avg. Children       |               1.92|                1.46|               1.36|                1.95|               1.98|
+| BA or Less          |               0.04|                0.10|               0.05|                0.10|               0.14|
+| Prof Degree         |               0.25|                0.68|               0.63|                0.78|               0.72|
+| Ph.D.               |               0.71|                0.22|               0.33|                0.12|               0.14|
+| Working on a Degree |               0.06|                0.26|               0.27|                0.18|               0.19|
+
+-   Cluster 1 is distinctly older and have PhDs
+-   The other clusters tend to have professional degrees, particularly cluster 4
+
+#### Institution Table
+
+``` r
+INSTVARS<-c("INSTTYPE","INSTCONT","CARNEGIE","SELECTIVITY2","INSTDESCR03","INSTDESCR08","INSTOPN10","INSTOPN11")
+table<-round(nfCrossTable(data=df[INSTVARS],CTvar=df$cluster),2)
+colnames(table)<-Clusternames
+rownames(table)<-c("2-year","4-year","University","Public","Research I","Research II","R3/Doctoral","Bachelors/Masters","Associates","Other Inst.","Highly Selective","Faculty very respectful","Administators very considerate","Research valued","Teaching valued")
+kable(table, caption = "Distribution of Adjunct Clusters by Institutional Characteristics")
+```
+
+|                                |  Cluster 1 (n=351)|  Cluster 2 (n=1240)|  Cluster 3 (n=756)|  Cluster 4 (n=1213)|  Cluster 5 (n=893)|
+|--------------------------------|------------------:|-------------------:|------------------:|-------------------:|------------------:|
+| 2-year                         |               0.02|                0.05|               0.03|                0.05|               0.06|
+| 4-year                         |               0.72|                0.71|               0.70|                0.69|               0.65|
+| University                     |               0.26|                0.24|               0.27|                0.26|               0.29|
+| Public                         |               0.39|                0.54|               0.48|                0.28|               0.36|
+| Research I                     |               0.08|                0.05|               0.06|                0.03|               0.03|
+| Research II                    |               0.12|                0.12|               0.14|                0.16|               0.17|
+| R3/Doctoral                    |               0.04|                0.06|               0.05|                0.05|               0.07|
+| Bachelors/Masters              |               0.73|                0.72|               0.72|                0.71|               0.67|
+| Associates                     |               0.02|                0.05|               0.03|                0.04|               0.06|
+| Other Inst.                    |               0.00|                0.00|               0.01|                0.00|               0.00|
+| Highly Selective               |               0.17|                0.07|               0.05|                0.02|               0.04|
+| Faculty very respectful        |               0.56|                0.56|               0.23|                0.51|               0.90|
+| Administators very considerate |               0.26|                0.13|               0.03|                0.15|               0.53|
+| Research valued                |               0.80|                0.70|               0.27|                0.56|               0.84|
+| Teaching valued                |               0.94|                0.96|               0.64|                0.91|               1.00|
+
+-   The faculty environment is important
+    -   Cluster 3 are in adverse environments where teach and reseach are not valued and where faculty and administrators are not respectful
+    -   Cluster 5 tend to have respectful administrators
+-   Teaching is valued (except for cluster 3)
+-   Research somewhat less valued for cluster 4
+-   Cluster 1 in somewhat more selective of institutions
+
+#### Department Table
+
+``` r
+source(file.path(Libraries, "Subclass.R"))
+table<-round(prop.table(table(df$SUBCLASS, df$cluster),2),2) # DEPTA was aggregated by HERI
+colnames(table)<-Clusternames
+#rownames(table)<-c("Agri/Forestry","Biology","Business","Education","Engineering","English","Fine Arts","Health-related","History/PoliSci","Humanities","Math/Stats","Non-technical","Technical","Physical Sciences","Social Sciences")
+kable(table, caption = "Distribution of Adjunct Clusters by Departmental Characteristics")
+```
+
+|                 |  Cluster 1 (n=351)|  Cluster 2 (n=1240)|  Cluster 3 (n=756)|  Cluster 4 (n=1213)|  Cluster 5 (n=893)|
+|-----------------|------------------:|-------------------:|------------------:|-------------------:|------------------:|
+| Sciences        |               0.22|                0.17|               0.11|                0.17|               0.12|
+| Soft/Applied    |               0.26|                0.28|               0.29|                0.50|               0.49|
+| Humanities/Arts |               0.25|                0.35|               0.40|                0.12|               0.18|
+| Health Sciences |               0.08|                0.06|               0.03|                0.09|               0.08|
+| Social Sciences |               0.19|                0.14|               0.17|                0.12|               0.14|
+
+-   Cluster 3 tend to be found in the Arts and humanities
+-   Clusters 4 and 5 tend to be found in soft, applied fields like education and business
+
+#### Employment Table
+
+``` r
+WORKVARS<-c("PRINACT2","ACADRANK","GENACT01","HEALTHBENEFITS", "RETIREBENEFITS","PTSALARY","COURSENUM","PROFDEVFAC")
+table<-round(nfCrossTable(data=df[WORKVARS],CTvar=df$cluster),2)
+colnames(table)<-Clusternames
+rownames(table)<-c("Teaching","Research","Administration","Other","Assistant Professor","Associate Professor","Instructor","Lecturer","Professor","Union member","Health benefits","Retirement","Avg. Salary","Avg. Courses","Prof. Dev. Rating")
+kable(table, caption = "Distribution of Adjunct Clusters by Work Characteristics")
+```
+
+|                     |  Cluster 1 (n=351)|  Cluster 2 (n=1240)|  Cluster 3 (n=756)|  Cluster 4 (n=1213)|  Cluster 5 (n=893)|
+|---------------------|------------------:|-------------------:|------------------:|-------------------:|------------------:|
+| Teaching            |               0.82|                0.95|               0.98|                0.98|               0.98|
+| Research            |               0.06|                0.01|               0.01|                0.00|               0.00|
+| Administration      |               0.07|                0.01|               0.00|                0.00|               0.00|
+| Other               |               0.05|                0.02|               0.01|                0.02|               0.02|
+| Assistant Professor |               0.10|                0.10|               0.07|                0.06|               0.09|
+| Associate Professor |               0.18|                0.02|               0.03|                0.04|               0.06|
+| Instructor          |               0.06|                0.44|               0.48|                0.68|               0.53|
+| Lecturer            |               0.12|                0.41|               0.38|                0.16|               0.24|
+| Professor           |               0.54|                0.03|               0.04|                0.06|               0.09|
+| Union member        |               0.22|                0.31|               0.28|                0.10|               0.16|
+| Health benefits     |               0.86|                0.71|               0.73|                0.18|               0.30|
+| Retirement          |               0.91|                0.72|               0.75|                0.23|               0.35|
+| Avg. Salary         |           36756.26|            18573.80|           16337.20|             8683.50|           13602.82|
+| Avg. Courses        |               1.75|                2.79|               2.96|                1.63|               2.03|
+| Prof. Dev. Rating   |               0.79|                0.01|              -0.06|               -0.17|              -0.04|
+
+-   All part-time faculty tend to be teachers, but cluster 1 also has some roles in research and administration
+-   Cluster 1 tend to be part-time professors (not only lecturers/teachers)
+-   Cluster 1, 2 and 3 tend to have full benefits. Cluster 4 and 5 tend to not have benefits
+-   Cluster 1 tend to earn more
+
+#### Part-time Employment Table
+
+``` r
+PTVARS<-c("PRINACT2","PTCHOICE","PTWORKFT","PTCAREER","PTTEACH","PTSALARY","PTPAY") # kept PRINACT2 bc bug requires it
+table<-round(nfCrossTable(data=df[PTVARS],CTvar=df$cluster),2)
+colnames(table)<-Clusternames
+rownames(table)<-c("Teaching","Research","Administration","Other","Involuntary PT","Sought FT","Career Outside Academia","# Other Institutions","Total Salary","Payment Per Course")
+kable(table, caption = "Distribution of Adjunct Clusters by Part-time Characteristics")
+```
+
+|                         |  Cluster 1 (n=351)|  Cluster 2 (n=1240)|  Cluster 3 (n=756)|  Cluster 4 (n=1213)|  Cluster 5 (n=893)|
+|-------------------------|------------------:|-------------------:|------------------:|-------------------:|------------------:|
+| Teaching                |               0.82|                0.95|               0.98|                0.98|               0.98|
+| Research                |               0.06|                0.01|               0.01|                0.00|               0.00|
+| Administration          |               0.07|                0.01|               0.00|                0.00|               0.00|
+| Other                   |               0.05|                0.02|               0.01|                0.02|               0.02|
+| Involuntary PT          |               0.19|                0.74|               0.81|                0.45|               0.47|
+| Sought FT               |               0.73|                0.55|               0.76|                0.30|               0.34|
+| Career Outside Academia |               0.08|                0.20|               0.21|                0.69|               0.45|
+| \# Other Institutions   |               0.21|                0.65|               0.88|                0.51|               0.45|
+| Total Salary            |           36756.26|            18573.80|           16337.20|             8683.50|           13602.82|
+| Payment Per Course      |            7604.80|             3713.26|            3316.54|             2964.21|            3487.01|
+
+-   Cluster 2 and Cluster 3 work PT Involuntarily. Cluster 1 work voluntarily.
+-   Most in clusters 4 and 5 have not pursued full-time work unsuccessfully.
+-   Cluster 4 are more likely to have full-time careers outside of academia
+-   Cluster 2 and 3 most likely to be itinerants
+
+### Part-time Faculty Typology
+
+-   Cluster 1: Career Enders
+-   Cluster 2:
+-   Cluster 3: Dejected adjunct (often arts)
+-   Cluster 4: Professional adjunct
+-   Cluster 5: Supported adjunct
 
 Conclusion
 ----------
 
-The employment characteristics tend to offer the most coherent understanding of who these adjuncts are and what they are doing in academia. The dimensions of full-time status, administration/teaching status and compensatory variables tend to most clearly distinguish adjunct times. One might conclude that cluster 1 constitutes the "aspiring academic of the soft sciences" Cluster two is probably an "administrative adjunct." Cluster 3 is probably the "part-time adjunct." Adjunct 4 is the "aspiring academic of the hard and applied fields."
+The employment characteristics tend to offer the most coherent understanding of who these adjuncts are and what they are doing in academia.
 
 Appendix
 --------
@@ -299,6 +465,15 @@ As demonstrated earlier, non-tenure track faculty are heterogeneous in their com
 A final category identified by these authors were the aspiring academics. Aspiring academics are “relatively new Ph.D.’s seeking tenure-track appointments and some Ph.D. recipients who have been teaching on a part-time basis for years in the hope of attaining a full-time, tenure-track position. Under better circumstances, they would be part of the tenured faculty (1993, p.54.55).” This definition calls attention to an important dimension often excluded by many researchers. Rather than generalize across all adjuncts, Gappa and Leslie make the point of distinguishing between those who are trying to establish a full-time, long-term career in academia and those who simply dabble in it. Recognizing the voluntary/involuntary nature of contingent status, then, is integral for any typological schema. This is a point also stressed by other researchers (Tilly 1998, Maynard and Joseph 2008).
 
 While the IPEDS and SDR datasets were very useful in understanding the growth of non-tenure track faculty over the decades, they each possess limitations. For the follow section, we draw on the HERI Faculty Survey. HERI is a cross-sectional instrument generalizing to all postsecondary instructional faculty. We draw specifically on their component related to non-tenure track faculty. The information on these faculty, particularly the part-time, non-tenure track faculty, is far more detailed than IPEDS or SDR. In the following figure (Figure 27), we take advantage of this detail by reproducing the classifcation schema formalized by Leslie and Gappa (1993).
+
+``` r
+load(file.path(Private_Cache,"HERI_Class.RData"))
+source(file.path(Munge, "01_Merge_the_data.R"))
+source(file.path(Munge, "02_Clean_the_data.R"))
+#source(file.path(Munge, "03_Recode_4_Impute.R"))
+source(file.path(Munge, "HERI_vars.R"))
+source(file.path(Munge, "03_Recode_HERI.R"))
+```
 
 ``` r
 ggplot(data=subset(df, !is.na(GAPPANTT)), aes(x=GAPPANTT)) + geom_bar(fill="firebrick") + xlab("Adjunct Type") + ylab("Count") +
@@ -360,10 +535,10 @@ Finally, freelancers are very similar to experts on most demographic characteris
 ### Institutional Characteristics of Gappa Classification
 
 ``` r
-INSTVARS<-c("INSTTYPE","INSTCONT","CARNEGIE","BIGLAN","SELECTIVITY2","INSTDESCR03","INSTDESCR08","INSTOPN10","INSTOPN11")
+INSTVARS<-c("INSTTYPE","INSTCONT","CARNEGIE","SELECTIVITY2","INSTDESCR03","INSTDESCR08","INSTOPN10","INSTOPN11")
 table<-round(nfCrossTable(data=df[INSTVARS],CTvar=as.integer(df$GAPPANTT)),2)
 colnames(table)<-GAPPAnames
-rownames(table)<-c("2-year","4-year","University","Public","Research I","Research II","R3/Doctoral","Bachelors/Masters","Associates","Other Inst.","Hard/Applied","Hard/Pure","Soft/Applied","Soft/Pure","Other Biglan","Highly Selective","Faculty very respectful","Administators very considerate","Research valued","Teaching valued")
+rownames(table)<-c("2-year","4-year","University","Public","Research I","Research II","R3/Doctoral","Bachelors/Masters","Associates","Other Inst.","Highly Selective","Faculty very respectful","Administators very considerate","Research valued","Teaching valued")
 kable(table, caption = "Distribution of Adjunct Clusters by Institutional Characteristics")
 ```
 
@@ -379,11 +554,6 @@ kable(table, caption = "Distribution of Adjunct Clusters by Institutional Charac
 | Bachelors/Masters              |       0.64|               0.71|          0.72|    0.69|        0.71|
 | Associates                     |       0.00|               0.04|          0.05|    0.04|        0.04|
 | Other Inst.                    |       0.01|               0.00|          0.00|    0.00|        0.00|
-| Hard/Applied                   |       0.35|               0.31|          0.26|    0.47|        0.28|
-| Hard/Pure                      |       0.04|               0.02|          0.03|    0.02|        0.04|
-| Soft/Applied                   |       0.19|               0.18|          0.23|    0.18|        0.22|
-| Soft/Pure                      |       0.33|               0.43|          0.41|    0.25|        0.40|
-| Other Biglan                   |       0.09|               0.07|          0.07|    0.08|        0.06|
 | Highly Selective               |       0.14|               0.05|          0.09|    0.04|        0.07|
 | Faculty very respectful        |       0.51|               0.55|          0.61|    0.58|        0.53|
 | Administators very considerate |       0.22|               0.20|          0.23|    0.22|        0.23|
@@ -430,6 +600,7 @@ kable(table, caption = "Distribution of Adjunct Clusters by Departmental Charact
 ### Employment Conditions of Gappa Classification
 
 ``` r
+df$SALARYALL=pmax(df$SALARY, df$PTSALARY, na.rm = TRUE) # important to include the combined salary variable so that salary insn't exclude from the clustering.
 WORKVARS<-c("PRINACT2","FULLSTAT","ACADRANK","GENACT01","HEALTHBENEFITS", "RETIREBENEFITS","SALARYALL","COURSENUM","PROFDEVFAC")
 table<-round(nfCrossTable(data=df[WORKVARS],CTvar=as.integer(df$GAPPANTT)),2)
 colnames(table)<-GAPPAnames
