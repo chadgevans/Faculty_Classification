@@ -1,4 +1,4 @@
 # Faculty Classification
 
-This analysis, the second chapter of my dissertation, uses k-means clustering to classify non-tenure track faculty in the HERI faculty study.  Over 100 faculty features were used to group the faculty and their classes were crosstabulated across demographic, institutional, departmental and employment characteristics.
+This chapter summarizes how non-tenure track faculty have been classified.  Most research appeals to work conducted by Gappa and Leslie (1993).  However, classification schemas are typically developed in a qualitative fashion and there has not been any emphasis to draw on quantitative methods and high dimensional data to see if better classification schemas may be possible.  I use k-means clustering to identify faculty groups and then crosstabulate those categories across a range of faculty characteristics.
 

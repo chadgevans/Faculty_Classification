@@ -113,8 +113,10 @@ df$HEALTHBENEFITS<-relevel(df$HEALTHBENEFITS,"No Health Ins")
 df$RETIREBENEFITS=df$SATIS03; levels(df$RETIREBENEFITS)=c("Retirement","No Retirement",rep("Retirement",3))
 df$RETIREBENEFITS<-relevel(df$RETIREBENEFITS,"No Retirement")
 
-df$PRINACT2<-df$PRINACT; levels(df$PRINACT2)[4]<-"Other"
-df$PRINACT2<-factor(df$PRINACT2,levels = c("Teaching","Research","Administration","Other"))
+df$PRINACT2<-df$PRINACT; levels(df$PRINACT2)[1]<-"Admin/Other"
+levels(df$PRINACT2)[2]<-"Admin/Other"
+levels(df$PRINACT2)[3]<-"Admin/Other"
+df$PRINACT2<-factor(df$PRINACT2,levels = c("Teaching","Research","Admin/Other"))
 
 df$GAPPANTT<- factor(rep(NA, nrow(df)), levels=c("FT NTT", "Aspiring Academic","Career-Ender","Expert","Freelancer"))  
 df$GAPPANTT[df$FULLSTAT %in% "Yes" ] <- "FT NTT"

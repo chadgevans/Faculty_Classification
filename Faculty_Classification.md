@@ -2,7 +2,7 @@ Faculty Classification
 ================
 Chad Evans
 
-Built with R version 3.3.2. Last run on 2017-10-09.
+Built with R version 3.3.2. Last run on 2017-11-07.
 
 Contents
 --------
@@ -235,27 +235,30 @@ kable(table, caption = "Distribution of Adjunct Clusters by Departmental Charact
 WORKVARS<-c("PRINACT2","ACADRANK","GENACT01","HEALTHBENEFITS", "RETIREBENEFITS","SALARY","COURSENUM","PROFDEVFAC")
 table<-round(nfCrossTable(data=df[WORKVARS],CTvar=df$cluster),2)
 colnames(table)<-Clusternames
-rownames(table)<-c("Teaching","Research","Administration","Other","Assistant Professor","Associate Professor","Instructor","Lecturer","Professor","Union member","Health benefits","Retirement","Avg. Salary","Avg. Courses","Prof. Dev. Rating")
+rownames(table)<-c("Teaching","Research","Administration/Other","Assistant Professor","Associate Professor","Instructor","Lecturer","Professor","Union member","Health benefits","Retirement","Avg. Salary","Avg. Courses","Prof. Dev. Rating")
 kable(table, caption = "Distribution of Adjunct Clusters by Work Characteristics")
 ```
 
-|                     |  Cluster 1 (n=656)|  Cluster 2 (n=1626)|  Cluster 3 (n=2245)|
-|---------------------|------------------:|-------------------:|-------------------:|
-| Teaching            |               0.06|                0.92|                0.93|
-| Research            |               0.16|                0.02|                0.01|
-| Administration      |               0.61|                0.02|                0.03|
-| Other               |               0.17|                0.04|                0.03|
-| Assistant Professor |               0.25|                0.35|                0.31|
-| Associate Professor |               0.19|                0.09|                0.10|
-| Instructor          |               0.28|                0.25|                0.28|
-| Lecturer            |               0.13|                0.28|                0.26|
-| Professor           |               0.15|                0.03|                0.05|
-| Union member        |               0.06|                0.16|                0.13|
-| Health benefits     |               0.96|                0.96|                0.94|
-| Retirement          |               0.97|                0.94|                0.94|
-| Avg. Salary         |           77805.87|            55033.36|            56998.66|
-| Avg. Courses        |               0.78|                3.27|                3.05|
-| Prof. Dev. Rating   |               0.08|               -0.06|                0.02|
+|                      |  Cluster 1 (n=656)|  Cluster 2 (n=1626)|  Cluster 3 (n=2245)|
+|----------------------|------------------:|-------------------:|-------------------:|
+| Teaching             |               0.06|                0.92|                0.93|
+| Research             |               0.16|                0.02|                0.01|
+| Administration/Other |               0.78|                0.06|                0.06|
+| Assistant Professor  |               0.25|                0.35|                0.31|
+| Associate Professor  |               0.19|                0.09|                0.10|
+| Instructor           |               0.28|                0.25|                0.28|
+| Lecturer             |               0.13|                0.28|                0.26|
+| Professor            |               0.15|                0.03|                0.05|
+| Union member         |               0.06|                0.16|                0.13|
+| Health benefits      |               0.96|                0.96|                0.94|
+| Retirement           |               0.97|                0.94|                0.94|
+| Avg. Salary          |           77805.87|            55033.36|            56998.66|
+| Avg. Courses         |               0.78|                3.27|                3.05|
+| Prof. Dev. Rating    |               0.08|               -0.06|                0.02|
+
+``` r
+write.csv(table, file.path(Graphs,"FT_Employment_table.csv"))
+```
 
 -   Most salient differences found in employment
 -   Cluster 1 do not teach. They are mostly administrators and some research faculty
@@ -264,10 +267,10 @@ kable(table, caption = "Distribution of Adjunct Clusters by Work Characteristics
 ### Full-time Faculty Typology
 
 -   Cluster 1: Administrative/research adjuncts
--   Cluster 2: Disgruntled adjunct
--   Cluster 3: Professional Schools professor
+-   Cluster 2: PhD adjunct
+-   Cluster 3: Professions Adjunct
 
-The "administrative adjunct" is the clearest pattern to emerge from the full-time faculty analysis.
+The "administrative adjunct" is the clearest pattern to emerge from the full-time faculty analysis. About 15% of full-time faculty fall into this class. The other two full-time adjuncts are best distinguished by their educational background (PhD versus Professional degree). Professional degree includes master's graduates, doctors, MBAs, etc. They are also distinguished by their perceived level of respect. PhD adjuncts (not a homogenous group) tend to perceive disrespect from collegues and administrators. They also feel their teaching and research are less valued.
 
 Cluster Analysis of Part-time Faculty
 -------------------------------------
@@ -283,7 +286,7 @@ idata<-data.frame(model.matrix(~ ., data=PTdfi, contrasts.arg = lapply(PTdfi[,sa
 wssplot(idata, nc=7) 
 ```
 
-![](graphs/unnamed-chunk-5-1.png)
+![](graphs/unnamed-chunk-6-1.png)
 
 The elbow suggests that five clusters sufficiently explain most of the variation in the part-time data. I therefore opt to go with five means in the k-means clustering analysis for part-time faculty.
 
@@ -389,27 +392,30 @@ kable(table, caption = "Distribution of Adjunct Clusters by Departmental Charact
 WORKVARS<-c("PRINACT2","ACADRANK","GENACT01","HEALTHBENEFITS", "RETIREBENEFITS","PTSALARY","COURSENUM","PROFDEVFAC")
 table<-round(nfCrossTable(data=df[WORKVARS],CTvar=df$cluster),2)
 colnames(table)<-Clusternames
-rownames(table)<-c("Teaching","Research","Administration","Other","Assistant Professor","Associate Professor","Instructor","Lecturer","Professor","Union member","Health benefits","Retirement","Avg. Salary","Avg. Courses","Prof. Dev. Rating")
+rownames(table)<-c("Teaching","Research","Administration/Other","Assistant Professor","Associate Professor","Instructor","Lecturer","Professor","Union member","Health benefits","Retirement","Avg. Salary","Avg. Courses","Prof. Dev. Rating")
 kable(table, caption = "Distribution of Adjunct Clusters by Work Characteristics")
 ```
 
-|                     |  Cluster 1 (n=351)|  Cluster 2 (n=1240)|  Cluster 3 (n=756)|  Cluster 4 (n=1213)|  Cluster 5 (n=893)|
-|---------------------|------------------:|-------------------:|------------------:|-------------------:|------------------:|
-| Teaching            |               0.82|                0.95|               0.98|                0.98|               0.98|
-| Research            |               0.06|                0.01|               0.01|                0.00|               0.00|
-| Administration      |               0.07|                0.01|               0.00|                0.00|               0.00|
-| Other               |               0.05|                0.02|               0.01|                0.02|               0.02|
-| Assistant Professor |               0.10|                0.10|               0.07|                0.06|               0.09|
-| Associate Professor |               0.18|                0.02|               0.03|                0.04|               0.06|
-| Instructor          |               0.06|                0.44|               0.48|                0.68|               0.53|
-| Lecturer            |               0.12|                0.41|               0.38|                0.16|               0.24|
-| Professor           |               0.54|                0.03|               0.04|                0.06|               0.09|
-| Union member        |               0.22|                0.31|               0.28|                0.10|               0.16|
-| Health benefits     |               0.86|                0.71|               0.73|                0.18|               0.30|
-| Retirement          |               0.91|                0.72|               0.75|                0.23|               0.35|
-| Avg. Salary         |           36756.26|            18573.80|           16337.20|             8683.50|           13602.82|
-| Avg. Courses        |               1.75|                2.79|               2.96|                1.63|               2.03|
-| Prof. Dev. Rating   |               0.79|                0.01|              -0.06|               -0.17|              -0.04|
+|                      |  Cluster 1 (n=351)|  Cluster 2 (n=1240)|  Cluster 3 (n=756)|  Cluster 4 (n=1213)|  Cluster 5 (n=893)|
+|----------------------|------------------:|-------------------:|------------------:|-------------------:|------------------:|
+| Teaching             |               0.82|                0.95|               0.98|                0.98|               0.98|
+| Research             |               0.06|                0.01|               0.01|                0.00|               0.00|
+| Administration/Other |               0.11|                0.03|               0.01|                0.02|               0.02|
+| Assistant Professor  |               0.10|                0.10|               0.07|                0.06|               0.09|
+| Associate Professor  |               0.18|                0.02|               0.03|                0.04|               0.06|
+| Instructor           |               0.06|                0.44|               0.48|                0.68|               0.53|
+| Lecturer             |               0.12|                0.41|               0.38|                0.16|               0.24|
+| Professor            |               0.54|                0.03|               0.04|                0.06|               0.09|
+| Union member         |               0.22|                0.31|               0.28|                0.10|               0.16|
+| Health benefits      |               0.86|                0.71|               0.73|                0.18|               0.30|
+| Retirement           |               0.91|                0.72|               0.75|                0.23|               0.35|
+| Avg. Salary          |           36756.26|            18573.80|           16337.20|             8683.50|           13602.82|
+| Avg. Courses         |               1.75|                2.79|               2.96|                1.63|               2.03|
+| Prof. Dev. Rating    |               0.79|                0.01|              -0.06|               -0.17|              -0.04|
+
+``` r
+write.csv(table, file.path(Graphs,"PT_Employment_table_1.csv"))
+```
 
 -   All part-time faculty tend to be teachers, but cluster 1 also has some roles in research and administration
 -   Cluster 1 tend to be part-time professors (not only lecturers/teachers)
@@ -422,7 +428,7 @@ kable(table, caption = "Distribution of Adjunct Clusters by Work Characteristics
 PTVARS<-c("PRINACT2","PTCHOICE","PTWORKFT","PTCAREER","PTTEACH","PTSALARY","PTPAY") # kept PRINACT2 bc bug requires it
 table<-round(nfCrossTable(data=df[PTVARS],CTvar=df$cluster),2)
 colnames(table)<-Clusternames
-rownames(table)<-c("Teaching","Research","Administration","Other","Involuntary PT","Sought FT","Career Outside Academia","# Other Institutions","Total Salary","Payment Per Course")
+rownames(table)<-c("Teaching","Research","Administration/Other","Involuntary PT","Sought FT","Career Outside Academia","# Other Institutions","Total Salary","Payment Per Course")
 kable(table, caption = "Distribution of Adjunct Clusters by Part-time Characteristics")
 ```
 
@@ -430,14 +436,17 @@ kable(table, caption = "Distribution of Adjunct Clusters by Part-time Characteri
 |-------------------------|------------------:|-------------------:|------------------:|-------------------:|------------------:|
 | Teaching                |               0.82|                0.95|               0.98|                0.98|               0.98|
 | Research                |               0.06|                0.01|               0.01|                0.00|               0.00|
-| Administration          |               0.07|                0.01|               0.00|                0.00|               0.00|
-| Other                   |               0.05|                0.02|               0.01|                0.02|               0.02|
+| Administration/Other    |               0.11|                0.03|               0.01|                0.02|               0.02|
 | Involuntary PT          |               0.19|                0.74|               0.81|                0.45|               0.47|
 | Sought FT               |               0.73|                0.55|               0.76|                0.30|               0.34|
 | Career Outside Academia |               0.08|                0.20|               0.21|                0.69|               0.45|
 | \# Other Institutions   |               0.21|                0.65|               0.88|                0.51|               0.45|
 | Total Salary            |           36756.26|            18573.80|           16337.20|             8683.50|           13602.82|
 | Payment Per Course      |            7604.80|             3713.26|            3316.54|             2964.21|            3487.01|
+
+``` r
+write.csv(table, file.path(Graphs,"PT_Employment_table_2.csv"))
+```
 
 -   Cluster 2 and Cluster 3 work PT Involuntarily. Cluster 1 work voluntarily.
 -   Most in clusters 4 and 5 have not pursued full-time work unsuccessfully.
@@ -447,10 +456,12 @@ kable(table, caption = "Distribution of Adjunct Clusters by Part-time Characteri
 ### Part-time Faculty Typology
 
 -   Cluster 1: Career Enders
--   Cluster 2:
--   Cluster 3: Dejected adjunct (often arts)
+-   Cluster 2: Aspiring Adjunct
+-   Cluster 3: Itinerant Adjunct (often in humanities/arts with a PhD): often have pursued full-time labor and been denied
 -   Cluster 4: Professional adjunct
--   Cluster 5: Supported adjunct
+-   Cluster 5: Voluntary adjunct (work expectations totally different). They feel respected by administrators/collegues, even though they don't have unions or benefits.
+
+Part-time faculty tend to be teachers, even career-enders with small roles in research and administration. Cluster four may be only "one coursers" with a very limited role, often in the professional fields, and without any serious professional development or benefits.
 
 Conclusion
 ----------
@@ -604,28 +615,27 @@ df$SALARYALL=pmax(df$SALARY, df$PTSALARY, na.rm = TRUE) # important to include t
 WORKVARS<-c("PRINACT2","FULLSTAT","ACADRANK","GENACT01","HEALTHBENEFITS", "RETIREBENEFITS","SALARYALL","COURSENUM","PROFDEVFAC")
 table<-round(nfCrossTable(data=df[WORKVARS],CTvar=as.integer(df$GAPPANTT)),2)
 colnames(table)<-GAPPAnames
-rownames(table)<-c("Teaching","Research","Administration","Other","Full-time","Assistant Professor","Associate Professor","Instructor","Lecturer","Professor","Union member","Health benefits","Retirement","Avg. Salary","Avg. Courses","Prof. Dev. Rating")
+rownames(table)<-c("Teaching","Research","Administration/Other","Full-time","Assistant Professor","Associate Professor","Instructor","Lecturer","Professor","Union member","Health benefits","Retirement","Avg. Salary","Avg. Courses","Prof. Dev. Rating")
 kable(table, caption = "Distribution of Adjunct Clusters by Work Characteristics")
 ```
 
-|                     |  Full-time|  Aspiring Academic|  Career-Ender|    Expert|  Freelancer|
-|---------------------|----------:|------------------:|-------------:|---------:|-----------:|
-| Teaching            |       0.80|               0.97|          0.92|      0.98|        0.93|
-| Research            |       0.04|               0.01|          0.02|      0.01|        0.01|
-| Administration      |       0.11|               0.01|          0.04|      0.00|        0.02|
-| Other               |       0.05|               0.01|          0.02|      0.02|        0.04|
-| Full-time           |       1.00|               0.00|          0.00|      0.00|        0.00|
-| Assistant Professor |       0.32|               0.08|          0.05|      0.07|        0.10|
-| Associate Professor |       0.11|               0.04|          0.06|      0.05|        0.07|
-| Instructor          |       0.27|               0.51|          0.31|      0.59|        0.47|
-| Lecturer            |       0.25|               0.32|          0.21|      0.23|        0.24|
-| Professor           |       0.06|               0.06|          0.37|      0.06|        0.13|
-| Union member        |       0.13|               0.23|          0.25|      0.10|        0.26|
-| Health benefits     |       0.95|               0.54|          0.59|      0.31|        0.52|
-| Retirement          |       0.94|               0.56|          0.65|      0.34|        0.59|
-| Avg. Salary         |   59270.56|           15868.56|      23485.43|  10302.64|    18674.39|
-| Avg. Courses        |       2.80|               2.59|          1.85|      1.50|        2.21|
-| Prof. Dev. Rating   |       0.23|              -0.27|          0.10|     -0.38|       -0.11|
+|                      |  Full-time|  Aspiring Academic|  Career-Ender|    Expert|  Freelancer|
+|----------------------|----------:|------------------:|-------------:|---------:|-----------:|
+| Teaching             |       0.80|               0.97|          0.92|      0.98|        0.93|
+| Research             |       0.04|               0.01|          0.02|      0.01|        0.01|
+| Administration/Other |       0.17|               0.02|          0.06|      0.02|        0.06|
+| Full-time            |       1.00|               0.00|          0.00|      0.00|        0.00|
+| Assistant Professor  |       0.32|               0.08|          0.05|      0.07|        0.10|
+| Associate Professor  |       0.11|               0.04|          0.06|      0.05|        0.07|
+| Instructor           |       0.27|               0.51|          0.31|      0.59|        0.47|
+| Lecturer             |       0.25|               0.32|          0.21|      0.23|        0.24|
+| Professor            |       0.06|               0.06|          0.37|      0.06|        0.13|
+| Union member         |       0.13|               0.23|          0.25|      0.10|        0.26|
+| Health benefits      |       0.95|               0.54|          0.59|      0.31|        0.52|
+| Retirement           |       0.94|               0.56|          0.65|      0.34|        0.59|
+| Avg. Salary          |   59270.56|           15868.56|      23485.43|  10302.64|    18674.39|
+| Avg. Courses         |       2.80|               2.59|          1.85|      1.50|        2.21|
+| Prof. Dev. Rating    |       0.23|              -0.27|          0.10|     -0.38|       -0.11|
 
 In terms of employment conditions, different types of adjunct face different types of conditions. As one would expect, full-time, non-tenure track faculty tend to have little or no work outside of their principle job. This makes sense, as they are already dedicating 35 hours or more to their principle job. As they are full-time workers, they also tend to have much stronger institutional support in terms of salary and perquisites. They earn good salaries (60,000/yr) and the vast majority have health insurance and retirement contributions. Perhaps because of this support, few of them have organized as members of labor unions.
 

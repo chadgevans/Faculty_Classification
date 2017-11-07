@@ -1,0 +1,15 @@
+"","Cluster 1 (n=351)","Cluster 2 (n=1240)","Cluster 3 (n=756)","Cluster 4 (n=1213)","Cluster 5 (n=893)"
+"Teaching",0.82,0.95,0.98,0.98,0.98
+"Research",0.06,0.01,0.01,0,0
+"Administration/Other",0.11,0.03,0.01,0.02,0.02
+"Assistant Professor",0.1,0.1,0.07,0.06,0.09
+"Associate Professor",0.18,0.02,0.03,0.04,0.06
+"Instructor",0.06,0.44,0.48,0.68,0.53
+"Lecturer",0.12,0.41,0.38,0.16,0.24
+"Professor",0.54,0.03,0.04,0.06,0.09
+"Union member",0.22,0.31,0.28,0.1,0.16
+"Health benefits",0.86,0.71,0.73,0.18,0.3
+"Retirement",0.91,0.72,0.75,0.23,0.35
+"Avg. Salary",36756.26,18573.8,16337.2,8683.5,13602.82
+"Avg. Courses",1.75,2.79,2.96,1.63,2.03
+"Prof. Dev. Rating",0.79,0.01,-0.06,-0.17,-0.04

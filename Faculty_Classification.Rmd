@@ -53,7 +53,7 @@ Private_Cache <- "/Users/chadgevans/Research/Projects/Data/HERI/Cache"
 Raw<-"/Users/chadgevans/Research/Projects/Data/HERI/Raw"
 Munge<-"./munge"
 Source<-"./src"
-Graph<-"./graphs"
+Graphs<-"./graphs"
 Libraries<-"./lib"
 ```
 
@@ -104,7 +104,7 @@ miss_pct_plot(PTdf)
 
 As expected, listwise deletion across all features is impossible. We thus must consider a method to deal with the missingness.  I opt for single imputiation.  In some cases, like regression, it would probably be worth multiply imputing to get standard errors correct.  However, this study is not using standard errors and is merely a procedure to find coherence in the data. I thus opt to singly impute the data for reasons of simplicity.
 
-The mice() package allows for many different algorithms to impute data.  I opted for using regression trees (CART). This was my choice because my data contain a large number of unbalanced factor variables.  The stochasitc method of predictive mean matching (pmm) failed with a computationally singular error.  The algorithm imputes each target column by using information from all of the other columns in the data. As most other columns have missingness as well, the algorthm uses the most recent round of imputations for each.  
+The mice() package allows for many different algorithms to impute data.  I opted for using regression trees (CART). This was my choice because my data contain a large number of unbalanced factor variables.  The stochasitc method of predictive mean matching (pmm) failed with a computationally singular error.  The CART algorithm imputes each target column by using information from all of the other columns in the data. As most other columns have missingness as well, the algorthm uses the most recent round of imputations for each.  
 
 I set the maximum iterations to 5.  This will give the chained equations multiple attempts to converge on a good imputed value for each cell.
 
@@ -207,8 +207,12 @@ kable(table, caption = "Distribution of Adjunct Clusters by Departmental Charact
 WORKVARS<-c("PRINACT2","ACADRANK","GENACT01","HEALTHBENEFITS", "RETIREBENEFITS","SALARY","COURSENUM","PROFDEVFAC")
 table<-round(nfCrossTable(data=df[WORKVARS],CTvar=df$cluster),2)
 colnames(table)<-Clusternames
-rownames(table)<-c("Teaching","Research","Administration","Other","Assistant Professor","Associate Professor","Instructor","Lecturer","Professor","Union member","Health benefits","Retirement","Avg. Salary","Avg. Courses","Prof. Dev. Rating")
+rownames(table)<-c("Teaching","Research","Administration/Other","Assistant Professor","Associate Professor","Instructor","Lecturer","Professor","Union member","Health benefits","Retirement","Avg. Salary","Avg. Courses","Prof. Dev. Rating")
 kable(table, caption = "Distribution of Adjunct Clusters by Work Characteristics")
+```
+
+```{r eval=FALSE}
+write.csv(table, file.path(Graphs,"FT_Employment_table.csv"))
 ```
 
 * Most salient differences found in employment
@@ -217,10 +221,10 @@ kable(table, caption = "Distribution of Adjunct Clusters by Work Characteristics
 
 ### Full-time Faculty Typology
 + Cluster 1: Administrative/research adjuncts
-+ Cluster 2: Disgruntled adjunct
-+ Cluster 3: Professional Schools professor
++ Cluster 2: PhD adjunct
++ Cluster 3: Professions Adjunct
 
-The "administrative adjunct" is the clearest pattern to emerge from the full-time faculty analysis.
+The "administrative adjunct" is the clearest pattern to emerge from the full-time faculty analysis.  About 15\% of full-time faculty fall into this class.  The other two full-time adjuncts are best distinguished by their educational background (PhD versus Professional degree).  Professional degree includes master's graduates, doctors, MBAs, etc.  They are also distinguished by their perceived level of respect.  PhD adjuncts (not a homogenous group) tend to perceive disrespect from collegues and administrators.  They also feel their teaching and research are less valued.
 
 ## Cluster Analysis of Part-time Faculty
 
@@ -307,8 +311,12 @@ kable(table, caption = "Distribution of Adjunct Clusters by Departmental Charact
 WORKVARS<-c("PRINACT2","ACADRANK","GENACT01","HEALTHBENEFITS", "RETIREBENEFITS","PTSALARY","COURSENUM","PROFDEVFAC")
 table<-round(nfCrossTable(data=df[WORKVARS],CTvar=df$cluster),2)
 colnames(table)<-Clusternames
-rownames(table)<-c("Teaching","Research","Administration","Other","Assistant Professor","Associate Professor","Instructor","Lecturer","Professor","Union member","Health benefits","Retirement","Avg. Salary","Avg. Courses","Prof. Dev. Rating")
+rownames(table)<-c("Teaching","Research","Administration/Other","Assistant Professor","Associate Professor","Instructor","Lecturer","Professor","Union member","Health benefits","Retirement","Avg. Salary","Avg. Courses","Prof. Dev. Rating")
 kable(table, caption = "Distribution of Adjunct Clusters by Work Characteristics")
+```
+
+```{r eval=FALSE}
+write.csv(table, file.path(Graphs,"PT_Employment_table_1.csv"))
 ```
 
 * All part-time faculty tend to be teachers, but cluster 1 also has some roles in research and administration
@@ -321,8 +329,12 @@ kable(table, caption = "Distribution of Adjunct Clusters by Work Characteristics
 PTVARS<-c("PRINACT2","PTCHOICE","PTWORKFT","PTCAREER","PTTEACH","PTSALARY","PTPAY") # kept PRINACT2 bc bug requires it
 table<-round(nfCrossTable(data=df[PTVARS],CTvar=df$cluster),2)
 colnames(table)<-Clusternames
-rownames(table)<-c("Teaching","Research","Administration","Other","Involuntary PT","Sought FT","Career Outside Academia","# Other Institutions","Total Salary","Payment Per Course")
+rownames(table)<-c("Teaching","Research","Administration/Other","Involuntary PT","Sought FT","Career Outside Academia","# Other Institutions","Total Salary","Payment Per Course")
 kable(table, caption = "Distribution of Adjunct Clusters by Part-time Characteristics")
+```
+
+```{r eval=FALSE}
+write.csv(table, file.path(Graphs,"PT_Employment_table_2.csv"))
 ```
 
 * Cluster 2 and Cluster 3 work PT Involuntarily.  Cluster 1 work voluntarily.
@@ -332,10 +344,12 @@ kable(table, caption = "Distribution of Adjunct Clusters by Part-time Characteri
 
 ### Part-time Faculty Typology
 * Cluster 1: Career Enders
-* Cluster 2: ?
-* Cluster 3: Dejected adjunct (often arts)
+* Cluster 2: Aspiring Adjunct
+* Cluster 3: Itinerant Adjunct (often in humanities/arts with a PhD): often have pursued full-time labor and been denied
 * Cluster 4: Professional adjunct
-* Cluster 5: Supported adjunct
+* Cluster 5: Voluntary adjunct (work expectations totally different).  They feel respected by administrators/collegues, even though they don't have unions or benefits.
+
+Part-time faculty tend to be teachers, even career-enders with small roles in research and administration.  Cluster four may be only "one coursers" with a very limited role, often in the professional fields, and without any serious professional development or benefits.
 
 ## Conclusion
 
@@ -436,7 +450,7 @@ df$SALARYALL=pmax(df$SALARY, df$PTSALARY, na.rm = TRUE) # important to include t
 WORKVARS<-c("PRINACT2","FULLSTAT","ACADRANK","GENACT01","HEALTHBENEFITS", "RETIREBENEFITS","SALARYALL","COURSENUM","PROFDEVFAC")
 table<-round(nfCrossTable(data=df[WORKVARS],CTvar=as.integer(df$GAPPANTT)),2)
 colnames(table)<-GAPPAnames
-rownames(table)<-c("Teaching","Research","Administration","Other","Full-time","Assistant Professor","Associate Professor","Instructor","Lecturer","Professor","Union member","Health benefits","Retirement","Avg. Salary","Avg. Courses","Prof. Dev. Rating")
+rownames(table)<-c("Teaching","Research","Administration/Other","Full-time","Assistant Professor","Associate Professor","Instructor","Lecturer","Professor","Union member","Health benefits","Retirement","Avg. Salary","Avg. Courses","Prof. Dev. Rating")
 kable(table, caption = "Distribution of Adjunct Clusters by Work Characteristics")
 ```
 
