@@ -465,3 +465,10 @@ Three-quarters of experts work substantial hours outside of their academic appoi
 
 Finally, Freelancers are nearly identical to aspiring academics, except that they are much less likely to have substantial work outside of their principle academic appointment.  Freelancers teach part-time proabably because they enjoy teaching, but do not necessarily want to do it full-time.  A part-time job probably gives them great flexibility to meet family demands or other responsibilities.
 
+### Exploratory
+```{r}
+clusters <- hclust(dist(FTdfi))
+plot(clusters)
+clusterCut <- cutree(clusters, 3)
+```
+

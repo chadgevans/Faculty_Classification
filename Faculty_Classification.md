@@ -2,7 +2,7 @@ Faculty Classification
 ================
 Chad Evans
 
-Built with R version 3.3.2. Last run on 2017-11-07.
+Built with R version 3.3.2. Last run on 2017-11-13.
 
 Contents
 --------
@@ -94,7 +94,7 @@ miss_pct_plot(PTdf)
 
 As expected, listwise deletion across all features is impossible. We thus must consider a method to deal with the missingness. I opt for single imputiation. In some cases, like regression, it would probably be worth multiply imputing to get standard errors correct. However, this study is not using standard errors and is merely a procedure to find coherence in the data. I thus opt to singly impute the data for reasons of simplicity.
 
-The mice() package allows for many different algorithms to impute data. I opted for using regression trees (CART). This was my choice because my data contain a large number of unbalanced factor variables. The stochasitc method of predictive mean matching (pmm) failed with a computationally singular error. The algorithm imputes each target column by using information from all of the other columns in the data. As most other columns have missingness as well, the algorthm uses the most recent round of imputations for each.
+The mice() package allows for many different algorithms to impute data. I opted for using regression trees (CART). This was my choice because my data contain a large number of unbalanced factor variables. The stochasitc method of predictive mean matching (pmm) failed with a computationally singular error. The CART algorithm imputes each target column by using information from all of the other columns in the data. As most other columns have missingness as well, the algorthm uses the most recent round of imputations for each.
 
 I set the maximum iterations to 5. This will give the chained equations multiple attempts to converge on a good imputed value for each cell.
 
@@ -646,3 +646,21 @@ Career-enders tend to have similar job conditions as aspiring academics, only th
 Three-quarters of experts work substantial hours outside of their academic appointment. They are also less likely to have healthcare contributions, retirement benefits and union representation. Perhaps many of them already have health and retirement benefits from outside careers. Their institutional salary is also pretty low, but their overall income is by far the highest of all adjunct types. This all conforms with our expectations regarding experts. These individuals do not participate in academia for financial reasons. They probably do it simply because they like sharing their work experience with young people, being exposed to a stimulating, intellectual environment or they need a productive break from their full-time careers.
 
 Finally, Freelancers are nearly identical to aspiring academics, except that they are much less likely to have substantial work outside of their principle academic appointment. Freelancers teach part-time proabably because they enjoy teaching, but do not necessarily want to do it full-time. A part-time job probably gives them great flexibility to meet family demands or other responsibilities.
+
+### Exploratory
+
+``` r
+clusters <- hclust(dist(FTdfi))
+```
+
+    ## Warning in dist(FTdfi): NAs introduced by coercion
+
+``` r
+plot(clusters)
+```
+
+![](graphs/unnamed-chunk-10-1.png)
+
+``` r
+clusterCut <- cutree(clusters, 3)
+```
