@@ -123,10 +123,6 @@ To implement k-means clustering, all data must be numeric.  This requires conver
 
 ```{r Create_Binaries}
 load(file.path(Private_Cache,"FTdfi.RData")) # Singly imputed data
-
-source(file.path(Munge, "HERI_vars.R"))
-FTdfi <- FTdfi %>% select(WORKVARS, FTVARS, OTHERVARS, PROFDEVVARS, STRESSVARS, PRODUCTIVITYVARS)
-
 idata<-data.frame(model.matrix(~ ., data=FTdfi, contrasts.arg = lapply(FTdfi[,sapply(FTdfi, is.factor)], contrasts, contrasts=FALSE)))
 ```
 
@@ -234,10 +230,6 @@ The "administrative adjunct" is the clearest pattern to emerge from the full-tim
 
 ```{r PT_Create_Binaries}
 load(file.path(Private_Cache,"PTdfi.RData")) # Singly imputed data
-
-source(file.path(Munge, "HERI_vars.R"))
-PTdfi <- PTdfi %>% select(WORKVARS, PTVARS, OTHERVARS, PROFDEVVARS, STRESSVARS, PRODUCTIVITYVARS)
-
 idata<-data.frame(model.matrix(~ ., data=PTdfi, contrasts.arg = lapply(PTdfi[,sapply(PTdfi, is.factor)], contrasts, contrasts=FALSE)))
 ```
 

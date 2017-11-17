@@ -2,7 +2,7 @@ Faculty Classification
 ================
 Chad Evans
 
-Built with R version 3.3.2. Last run on 2017-11-13.
+Built with R version 3.3.2. Last run on 2017-11-17.
 
 Contents
 --------
@@ -114,6 +114,10 @@ To implement k-means clustering, all data must be numeric. This requires convert
 
 ``` r
 load(file.path(Private_Cache,"FTdfi.RData")) # Singly imputed data
+
+source(file.path(Munge, "HERI_vars.R"))
+FTdfi <- FTdfi %>% select(WORKVARS, FTVARS, OTHERVARS, PROFDEVVARS, STRESSVARS, PRODUCTIVITYVARS)
+
 idata<-data.frame(model.matrix(~ ., data=FTdfi, contrasts.arg = lapply(FTdfi[,sapply(FTdfi, is.factor)], contrasts, contrasts=FALSE)))
 ```
 
@@ -156,19 +160,19 @@ rownames(table)<-c("Age","Male","Married","White","Citizen","Native English","Av
 kable(table, caption = "Distribution of Adjunct Clusters by Demographic Characteristics")
 ```
 
-|                     |  Cluster 1 (n=656)|  Cluster 2 (n=1626)|  Cluster 3 (n=2245)|
-|---------------------|------------------:|-------------------:|-------------------:|
-| Age                 |              49.65|               45.99|               50.16|
-| Male                |               0.49|                0.43|                0.43|
-| Married             |               0.80|                0.75|                0.78|
-| White               |               0.83|                0.81|                0.86|
-| Citizen             |               0.93|                0.92|                0.95|
-| Native English      |               0.88|                0.87|                0.91|
-| Avg. Children       |               1.56|                1.27|                1.65|
-| BA or Less          |               0.07|                0.04|                0.06|
-| Prof Degree         |               0.54|                0.50|                0.64|
-| Ph.D.               |               0.39|                0.46|                0.30|
-| Working on a Degree |               0.13|                0.20|                0.19|
+|                     |  Cluster 1 (n=2686)|  Cluster 2 (n=716)|  Cluster 3 (n=1125)|
+|---------------------|-------------------:|------------------:|-------------------:|
+| Age                 |               48.28|              45.38|               51.37|
+| Male                |                0.45|               0.39|                0.43|
+| Married             |                0.77|               0.74|                0.80|
+| White               |                0.84|               0.80|                0.85|
+| Citizen             |                0.93|               0.91|                0.97|
+| Native English      |                0.88|               0.86|                0.94|
+| Avg. Children       |                1.47|               1.29|                1.72|
+| BA or Less          |                0.06|               0.04|                0.05|
+| Prof Degree         |                0.58|               0.51|                0.62|
+| Ph.D.               |                0.37|               0.45|                0.33|
+| Working on a Degree |                0.20|               0.17|                0.16|
 
 -   Most demographic characterstics don't differ much across clusters.
 -   Cluster 3 tends to have a professional background (and somewhat fewer PhDs).
@@ -184,23 +188,23 @@ rownames(table)<-c("2-year","4-year","University","Public","Research I","Researc
 kable(table, caption = "Distribution of Adjunct Clusters by Institutional Characteristics")
 ```
 
-|                                |  Cluster 1 (n=656)|  Cluster 2 (n=1626)|  Cluster 3 (n=2245)|
-|--------------------------------|------------------:|-------------------:|-------------------:|
-| 2-year                         |               0.00|                0.00|                0.00|
-| 4-year                         |               0.57|                0.58|                0.70|
-| University                     |               0.43|                0.42|                0.30|
-| Public                         |               0.33|                0.43|                0.36|
-| Research I                     |               0.07|                0.04|                0.04|
-| Research II                    |               0.26|                0.26|                0.16|
-| R3/Doctoral                    |               0.09|                0.10|                0.08|
-| Bachelors/Masters              |               0.56|                0.58|                0.70|
-| Associates                     |               0.00|                0.00|                0.00|
-| Other Inst.                    |               0.02|                0.02|                0.01|
-| Highly Selective               |               0.10|                0.09|                0.11|
-| Faculty very respectful        |               0.46|                0.31|                0.67|
-| Administators very considerate |               0.30|                0.06|                0.31|
-| Research valued                |               0.73|                0.48|                0.81|
-| Teaching valued                |               0.85|                0.79|                0.98|
+|                                |  Cluster 1 (n=2686)|  Cluster 2 (n=716)|  Cluster 3 (n=1125)|
+|--------------------------------|-------------------:|------------------:|-------------------:|
+| 2-year                         |                0.00|               0.00|                0.00|
+| 4-year                         |                0.64|               0.62|                0.63|
+| University                     |                0.36|               0.38|                0.37|
+| Public                         |                0.40|               0.43|                0.30|
+| Research I                     |                0.04|               0.04|                0.05|
+| Research II                    |                0.21|               0.24|                0.21|
+| R3/Doctoral                    |                0.09|               0.07|                0.10|
+| Bachelors/Masters              |                0.65|               0.64|                0.63|
+| Associates                     |                0.00|               0.00|                0.00|
+| Other Inst.                    |                0.01|               0.01|                0.01|
+| Highly Selective               |                0.10|               0.11|                0.09|
+| Faculty very respectful        |                0.53|               0.49|                0.47|
+| Administators very considerate |                0.21|               0.14|                0.27|
+| Research valued                |                0.70|               0.57|                0.69|
+| Teaching valued                |                0.91|               0.85|                0.89|
 
 -   Cluster 3 have a much more optimistic outlook on their work. They are more likely to report that faculty and administrators are respectful, and that research and teaching is valued.
 -   Cluster 2 are much more cynical. They report that faculty are not very respectful and administrators are nearly all not respectful. They also tend to report that research is not valued where they work. Also, teaching isn't particularly valued to them either.
@@ -218,13 +222,13 @@ colnames(table)<-Clusternames
 kable(table, caption = "Distribution of Adjunct Clusters by Departmental Characteristics")
 ```
 
-|                 |  Cluster 1 (n=656)|  Cluster 2 (n=1626)|  Cluster 3 (n=2245)|
-|-----------------|------------------:|-------------------:|-------------------:|
-| Sciences        |               0.16|                0.19|                0.20|
-| Soft/Applied    |               0.55|                0.28|                0.38|
-| Humanities/Arts |               0.09|                0.30|                0.20|
-| Health Sciences |               0.12|                0.10|                0.13|
-| Social Sciences |               0.08|                0.13|                0.09|
+|                 |  Cluster 1 (n=2686)|  Cluster 2 (n=716)|  Cluster 3 (n=1125)|
+|-----------------|-------------------:|------------------:|-------------------:|
+| Sciences        |                0.22|               0.22|                0.10|
+| Soft/Applied    |                0.33|               0.26|                0.50|
+| Humanities/Arts |                0.22|               0.31|                0.17|
+| Health Sciences |                0.13|               0.06|                0.14|
+| Social Sciences |                0.10|               0.14|                0.09|
 
 -   Cluster 1 tends to be in Sciences or Soft/applied fields
 -   Cluster 2 tends to have the most Humanities/Arts faculty.
@@ -239,22 +243,22 @@ rownames(table)<-c("Teaching","Research","Administration/Other","Assistant Profe
 kable(table, caption = "Distribution of Adjunct Clusters by Work Characteristics")
 ```
 
-|                      |  Cluster 1 (n=656)|  Cluster 2 (n=1626)|  Cluster 3 (n=2245)|
-|----------------------|------------------:|-------------------:|-------------------:|
-| Teaching             |               0.06|                0.92|                0.93|
-| Research             |               0.16|                0.02|                0.01|
-| Administration/Other |               0.78|                0.06|                0.06|
-| Assistant Professor  |               0.25|                0.35|                0.31|
-| Associate Professor  |               0.19|                0.09|                0.10|
-| Instructor           |               0.28|                0.25|                0.28|
-| Lecturer             |               0.13|                0.28|                0.26|
-| Professor            |               0.15|                0.03|                0.05|
-| Union member         |               0.06|                0.16|                0.13|
-| Health benefits      |               0.96|                0.96|                0.94|
-| Retirement           |               0.97|                0.94|                0.94|
-| Avg. Salary          |           77805.87|            55033.36|            56998.66|
-| Avg. Courses         |               0.78|                3.27|                3.05|
-| Prof. Dev. Rating    |               0.08|               -0.06|                0.02|
+|                      |  Cluster 1 (n=2686)|  Cluster 2 (n=716)|  Cluster 3 (n=1125)|
+|----------------------|-------------------:|------------------:|-------------------:|
+| Teaching             |                0.92|               0.87|                0.45|
+| Research             |                0.04|               0.06|                0.02|
+| Administration/Other |                0.04|               0.07|                0.53|
+| Assistant Professor  |                0.35|               0.29|                0.26|
+| Associate Professor  |                0.08|               0.06|                0.19|
+| Instructor           |                0.27|               0.32|                0.23|
+| Lecturer             |                0.26|               0.31|                0.20|
+| Professor            |                0.05|               0.03|                0.11|
+| Union member         |                0.14|               0.16|                0.11|
+| Health benefits      |                0.95|               0.94|                0.96|
+| Retirement           |                0.94|               0.90|                0.98|
+| Avg. Salary          |            55276.56|           49720.19|            75026.27|
+| Avg. Courses         |                3.14|               3.04|                1.83|
+| Prof. Dev. Rating    |               -0.02|              -0.27|                0.22|
 
 ``` r
 write.csv(table, file.path(Graphs,"FT_Employment_table.csv"))
@@ -277,6 +281,10 @@ Cluster Analysis of Part-time Faculty
 
 ``` r
 load(file.path(Private_Cache,"PTdfi.RData")) # Singly imputed data
+
+source(file.path(Munge, "HERI_vars.R"))
+PTdfi <- PTdfi %>% select(WORKVARS, PTVARS, OTHERVARS, PROFDEVVARS, STRESSVARS, PRODUCTIVITYVARS)
+
 idata<-data.frame(model.matrix(~ ., data=PTdfi, contrasts.arg = lapply(PTdfi[,sapply(PTdfi, is.factor)], contrasts, contrasts=FALSE)))
 ```
 
@@ -313,19 +321,19 @@ rownames(table)<-c("Age","Male","Married","White","Citizen","Native English","Av
 kable(table, caption = "Distribution of Adjunct Clusters by Demographic Characteristics")
 ```
 
-|                     |  Cluster 1 (n=351)|  Cluster 2 (n=1240)|  Cluster 3 (n=756)|  Cluster 4 (n=1213)|  Cluster 5 (n=893)|
+|                     |  Cluster 1 (n=953)|  Cluster 2 (n=1027)|  Cluster 3 (n=391)|  Cluster 4 (n=1641)|  Cluster 5 (n=441)|
 |---------------------|------------------:|-------------------:|------------------:|-------------------:|------------------:|
-| Age                 |              61.45|               47.00|              48.16|               52.63|              53.68|
-| Male                |               0.56|                0.39|               0.38|                0.59|               0.47|
-| Married             |               0.82|                0.74|               0.74|                0.83|               0.81|
-| White               |               0.90|                0.79|               0.80|                0.86|               0.85|
-| Citizen             |               0.97|                0.93|               0.95|                0.98|               0.98|
-| Native English      |               0.93|                0.87|               0.90|                0.95|               0.93|
-| Avg. Children       |               1.92|                1.46|               1.36|                1.95|               1.98|
-| BA or Less          |               0.04|                0.10|               0.05|                0.10|               0.14|
-| Prof Degree         |               0.25|                0.68|               0.63|                0.78|               0.72|
-| Ph.D.               |               0.71|                0.22|               0.33|                0.12|               0.14|
-| Working on a Degree |               0.06|                0.26|               0.27|                0.18|               0.19|
+| Age                 |              50.75|               47.64|              49.66|               51.70|              60.09|
+| Male                |               0.48|                0.40|               0.44|                0.51|               0.53|
+| Married             |               0.80|                0.74|               0.75|                0.80|               0.81|
+| White               |               0.86|                0.79|               0.83|                0.82|               0.89|
+| Citizen             |               0.97|                0.93|               0.96|                0.97|               0.97|
+| Native English      |               0.93|                0.88|               0.92|                0.92|               0.93|
+| Avg. Children       |               1.75|                1.41|               1.57|                1.88|               1.88|
+| BA or Less          |               0.12|                0.05|               0.09|                0.12|               0.05|
+| Prof Degree         |               0.72|                0.63|               0.70|                0.76|               0.33|
+| Ph.D.               |               0.16|                0.32|               0.21|                0.12|               0.61|
+| Working on a Degree |               0.20|                0.25|               0.23|                0.21|               0.09|
 
 -   Cluster 1 is distinctly older and have PhDs
 -   The other clusters tend to have professional degrees, particularly cluster 4
@@ -340,23 +348,23 @@ rownames(table)<-c("2-year","4-year","University","Public","Research I","Researc
 kable(table, caption = "Distribution of Adjunct Clusters by Institutional Characteristics")
 ```
 
-|                                |  Cluster 1 (n=351)|  Cluster 2 (n=1240)|  Cluster 3 (n=756)|  Cluster 4 (n=1213)|  Cluster 5 (n=893)|
+|                                |  Cluster 1 (n=953)|  Cluster 2 (n=1027)|  Cluster 3 (n=391)|  Cluster 4 (n=1641)|  Cluster 5 (n=441)|
 |--------------------------------|------------------:|-------------------:|------------------:|-------------------:|------------------:|
-| 2-year                         |               0.02|                0.05|               0.03|                0.05|               0.06|
-| 4-year                         |               0.72|                0.71|               0.70|                0.69|               0.65|
-| University                     |               0.26|                0.24|               0.27|                0.26|               0.29|
-| Public                         |               0.39|                0.54|               0.48|                0.28|               0.36|
-| Research I                     |               0.08|                0.05|               0.06|                0.03|               0.03|
-| Research II                    |               0.12|                0.12|               0.14|                0.16|               0.17|
-| R3/Doctoral                    |               0.04|                0.06|               0.05|                0.05|               0.07|
-| Bachelors/Masters              |               0.73|                0.72|               0.72|                0.71|               0.67|
-| Associates                     |               0.02|                0.05|               0.03|                0.04|               0.06|
+| 2-year                         |               0.04|                0.03|               0.04|                0.06|               0.02|
+| 4-year                         |               0.69|                0.74|               0.74|                0.65|               0.71|
+| University                     |               0.27|                0.23|               0.22|                0.29|               0.27|
+| Public                         |               0.39|                0.57|               0.32|                0.35|               0.39|
+| Research I                     |               0.03|                0.05|               0.04|                0.04|               0.07|
+| Research II                    |               0.15|                0.13|               0.11|                0.16|               0.14|
+| R3/Doctoral                    |               0.05|                0.05|               0.05|                0.07|               0.04|
+| Bachelors/Masters              |               0.72|                0.74|               0.75|                0.67|               0.72|
+| Associates                     |               0.04|                0.03|               0.04|                0.06|               0.02|
 | Other Inst.                    |               0.00|                0.00|               0.01|                0.00|               0.00|
-| Highly Selective               |               0.17|                0.07|               0.05|                0.02|               0.04|
-| Faculty very respectful        |               0.56|                0.56|               0.23|                0.51|               0.90|
-| Administators very considerate |               0.26|                0.13|               0.03|                0.15|               0.53|
-| Research valued                |               0.80|                0.70|               0.27|                0.56|               0.84|
-| Teaching valued                |               0.94|                0.96|               0.64|                0.91|               1.00|
+| Highly Selective               |               0.04|                0.08|               0.03|                0.03|               0.15|
+| Faculty very respectful        |               0.57|                0.44|               0.48|                0.64|               0.56|
+| Administators very considerate |               0.22|                0.10|               0.14|                0.28|               0.25|
+| Research valued                |               0.56|                0.56|               0.49|                0.69|               0.77|
+| Teaching valued                |               0.89|                0.84|               0.82|                0.95|               0.94|
 
 -   The faculty environment is important
     -   Cluster 3 are in adverse environments where teach and reseach are not valued and where faculty and administrators are not respectful
@@ -375,13 +383,13 @@ colnames(table)<-Clusternames
 kable(table, caption = "Distribution of Adjunct Clusters by Departmental Characteristics")
 ```
 
-|                 |  Cluster 1 (n=351)|  Cluster 2 (n=1240)|  Cluster 3 (n=756)|  Cluster 4 (n=1213)|  Cluster 5 (n=893)|
+|                 |  Cluster 1 (n=953)|  Cluster 2 (n=1027)|  Cluster 3 (n=391)|  Cluster 4 (n=1641)|  Cluster 5 (n=441)|
 |-----------------|------------------:|-------------------:|------------------:|-------------------:|------------------:|
-| Sciences        |               0.22|                0.17|               0.11|                0.17|               0.12|
-| Soft/Applied    |               0.26|                0.28|               0.29|                0.50|               0.49|
-| Humanities/Arts |               0.25|                0.35|               0.40|                0.12|               0.18|
-| Health Sciences |               0.08|                0.06|               0.03|                0.09|               0.08|
-| Social Sciences |               0.19|                0.14|               0.17|                0.12|               0.14|
+| Sciences        |               0.16|                0.14|               0.12|                0.15|               0.21|
+| Soft/Applied    |               0.42|                0.25|               0.39|                0.47|               0.28|
+| Humanities/Arts |               0.21|                0.40|               0.30|                0.18|               0.24|
+| Health Sciences |               0.07|                0.05|               0.04|                0.08|               0.10|
+| Social Sciences |               0.14|                0.16|               0.15|                0.12|               0.18|
 
 -   Cluster 3 tend to be found in the Arts and humanities
 -   Clusters 4 and 5 tend to be found in soft, applied fields like education and business
@@ -396,22 +404,22 @@ rownames(table)<-c("Teaching","Research","Administration/Other","Assistant Profe
 kable(table, caption = "Distribution of Adjunct Clusters by Work Characteristics")
 ```
 
-|                      |  Cluster 1 (n=351)|  Cluster 2 (n=1240)|  Cluster 3 (n=756)|  Cluster 4 (n=1213)|  Cluster 5 (n=893)|
+|                      |  Cluster 1 (n=953)|  Cluster 2 (n=1027)|  Cluster 3 (n=391)|  Cluster 4 (n=1641)|  Cluster 5 (n=441)|
 |----------------------|------------------:|-------------------:|------------------:|-------------------:|------------------:|
-| Teaching             |               0.82|                0.95|               0.98|                0.98|               0.98|
-| Research             |               0.06|                0.01|               0.01|                0.00|               0.00|
-| Administration/Other |               0.11|                0.03|               0.01|                0.02|               0.02|
-| Assistant Professor  |               0.10|                0.10|               0.07|                0.06|               0.09|
-| Associate Professor  |               0.18|                0.02|               0.03|                0.04|               0.06|
-| Instructor           |               0.06|                0.44|               0.48|                0.68|               0.53|
-| Lecturer             |               0.12|                0.41|               0.38|                0.16|               0.24|
-| Professor            |               0.54|                0.03|               0.04|                0.06|               0.09|
-| Union member         |               0.22|                0.31|               0.28|                0.10|               0.16|
-| Health benefits      |               0.86|                0.71|               0.73|                0.18|               0.30|
-| Retirement           |               0.91|                0.72|               0.75|                0.23|               0.35|
-| Avg. Salary          |           36756.26|            18573.80|           16337.20|             8683.50|           13602.82|
-| Avg. Courses         |               1.75|                2.79|               2.96|                1.63|               2.03|
-| Prof. Dev. Rating    |               0.79|                0.01|              -0.06|               -0.17|              -0.04|
+| Teaching             |               0.98|                0.97|               0.98|                0.97|               0.82|
+| Research             |               0.00|                0.01|               0.00|                0.00|               0.06|
+| Administration/Other |               0.02|                0.02|               0.02|                0.02|               0.12|
+| Assistant Professor  |               0.06|                0.10|               0.05|                0.07|               0.12|
+| Associate Professor  |               0.04|                0.02|               0.04|                0.04|               0.17|
+| Instructor           |               0.60|                0.36|               0.63|                0.60|               0.13|
+| Lecturer             |               0.24|                0.50|               0.23|                0.20|               0.15|
+| Professor            |               0.05|                0.02|               0.05|                0.08|               0.43|
+| Union member         |               0.16|                0.39|               0.14|                0.15|               0.21|
+| Health benefits      |               0.34|                0.79|               0.44|                0.34|               0.82|
+| Retirement           |               0.38|                0.77|               0.49|                0.39|               0.86|
+| Avg. Salary          |           11005.33|            21356.14|           12272.68|            11256.67|           34657.24|
+| Avg. Courses         |               1.95|                3.31|               2.46|                1.88|               1.82|
+| Prof. Dev. Rating    |              -0.20|                0.08|              -0.17|               -0.10|               0.76|
 
 ``` r
 write.csv(table, file.path(Graphs,"PT_Employment_table_1.csv"))
@@ -432,17 +440,17 @@ rownames(table)<-c("Teaching","Research","Administration/Other","Involuntary PT"
 kable(table, caption = "Distribution of Adjunct Clusters by Part-time Characteristics")
 ```
 
-|                         |  Cluster 1 (n=351)|  Cluster 2 (n=1240)|  Cluster 3 (n=756)|  Cluster 4 (n=1213)|  Cluster 5 (n=893)|
+|                         |  Cluster 1 (n=953)|  Cluster 2 (n=1027)|  Cluster 3 (n=391)|  Cluster 4 (n=1641)|  Cluster 5 (n=441)|
 |-------------------------|------------------:|-------------------:|------------------:|-------------------:|------------------:|
-| Teaching                |               0.82|                0.95|               0.98|                0.98|               0.98|
-| Research                |               0.06|                0.01|               0.01|                0.00|               0.00|
-| Administration/Other    |               0.11|                0.03|               0.01|                0.02|               0.02|
-| Involuntary PT          |               0.19|                0.74|               0.81|                0.45|               0.47|
-| Sought FT               |               0.73|                0.55|               0.76|                0.30|               0.34|
-| Career Outside Academia |               0.08|                0.20|               0.21|                0.69|               0.45|
-| \# Other Institutions   |               0.21|                0.65|               0.88|                0.51|               0.45|
-| Total Salary            |           36756.26|            18573.80|           16337.20|             8683.50|           13602.82|
-| Payment Per Course      |            7604.80|             3713.26|            3316.54|             2964.21|            3487.01|
+| Teaching                |               0.98|                0.97|               0.98|                0.97|               0.82|
+| Research                |               0.00|                0.01|               0.00|                0.00|               0.06|
+| Administration/Other    |               0.02|                0.02|               0.02|                0.02|               0.12|
+| Involuntary PT          |               0.55|                0.83|               0.65|                0.51|               0.22|
+| Sought FT               |               0.40|                0.74|               0.50|                0.33|               0.68|
+| Career Outside Academia |               0.50|                0.11|               0.49|                0.52|               0.09|
+| \# Other Institutions   |               0.54|                0.79|               0.71|                0.52|               0.24|
+| Total Salary            |           11005.33|            21356.14|           12272.68|            11256.67|           34657.24|
+| Payment Per Course      |            3056.51|             4020.35|            3041.47|             3190.15|            6770.13|
 
 ``` r
 write.csv(table, file.path(Graphs,"PT_Employment_table_2.csv"))
