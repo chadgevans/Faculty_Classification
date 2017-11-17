@@ -1,10 +1,10 @@
-"","Cluster 1 (n=351)","Cluster 2 (n=1240)","Cluster 3 (n=756)","Cluster 4 (n=1213)","Cluster 5 (n=893)"
-"Teaching",0.82,0.95,0.98,0.98,0.98
-"Research",0.06,0.01,0.01,0,0
-"Administration/Other",0.11,0.03,0.01,0.02,0.02
-"Involuntary PT",0.19,0.74,0.81,0.45,0.47
-"Sought FT",0.73,0.55,0.76,0.3,0.34
-"Career Outside Academia",0.08,0.2,0.21,0.69,0.45
-"# Other Institutions",0.21,0.65,0.88,0.51,0.45
-"Total Salary",36756.26,18573.8,16337.2,8683.5,13602.82
-"Payment Per Course",7604.8,3713.26,3316.54,2964.21,3487.01
+"","Cluster 1 (n=953)","Cluster 2 (n=1027)","Cluster 3 (n=391)","Cluster 4 (n=1641)","Cluster 5 (n=441)"
+"Teaching",0.98,0.97,0.98,0.97,0.82
+"Research",0,0.01,0,0,0.06
+"Administration/Other",0.02,0.02,0.02,0.02,0.12
+"Involuntary PT",0.55,0.83,0.65,0.51,0.22
+"Sought FT",0.4,0.74,0.5,0.33,0.68
+"Career Outside Academia",0.5,0.11,0.49,0.52,0.09
+"# Other Institutions",0.54,0.79,0.71,0.52,0.24
+"Total Salary",11005.33,21356.14,12272.68,11256.67,34657.24
+"Payment Per Course",3056.51,4020.35,3041.47,3190.15,6770.13
