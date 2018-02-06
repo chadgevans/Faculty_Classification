@@ -2,7 +2,7 @@ Faculty Classification
 ================
 Chad Evans
 
-Built with R version 3.3.2. Last run on 2017-11-17.
+Built with R version 3.3.2. Last run on 2018-02-06.
 
 Contents
 --------
@@ -50,6 +50,7 @@ source(file.path(Munge, "01_Merge_the_data.R"))
 source(file.path(Munge, "02_Clean_the_data.R"))
 source(file.path(Munge, "03_Recode_4_Impute.R")) # necessary to avoid subscript out of bounds
 source(file.path(Munge, "HERI_vars.R"))
+# source(file.path(Munge, "03_Recode_HERI.R"))
 ```
 
 ### Create Full-time and Part-time Datasets

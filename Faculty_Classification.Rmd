@@ -49,8 +49,8 @@ knitr::opts_chunk$set(echo = TRUE, message=FALSE, fig.width=5, fig.height=5, fig
 ```
 
 ```{r Directories, include=FALSE}
-Private_Cache <- "/Users/chadgevans/Research/Projects/Data/HERI/Cache"
-Raw<-"/Users/chadgevans/Research/Projects/Data/HERI/Raw"
+Private_Cache <- "/Users/chadgevans/Documents/Research/Projects/Data/HERI/Cache"
+Raw<-"/Users/chadgevans/Documents/Research/Projects/Data/HERI/Raw"
 Munge<-"./munge"
 Source<-"./src"
 Graphs<-"./graphs"
@@ -75,6 +75,8 @@ source(file.path(Munge, "01_Merge_the_data.R"))
 source(file.path(Munge, "02_Clean_the_data.R"))
 source(file.path(Munge, "03_Recode_4_Impute.R")) # necessary to avoid subscript out of bounds
 source(file.path(Munge, "HERI_vars.R"))
+# source(file.path(Munge, "03_Recode_HERI.R"))
+
 ```
 
 ### Create Full-time and Part-time Datasets
